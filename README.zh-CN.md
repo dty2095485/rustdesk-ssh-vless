@@ -89,3 +89,17 @@
 - Windows 安装包:见 [Releases](../../releases)——用占位符连接配置编译的,没有内置真实服务器信息;装完之后自己通过 设置 → 网络 →"Import/export all config" 导入你自己的配置,或者用上面的环境变量重新编译。
 - 服务端+网关四合一镜像:`ghcr.io/dty2095485/rustdesk-server-combined:latest`(同样是占位符构建,没有个人配置;通过容器的 `RELAY`、`VLESS_UUID`、`VLESS_CERT`、`VLESS_KEY`、`SSH_AUTHORIZED_KEYS` 环境变量/挂载来配置)。
   也以 `rustdesk-server-combined-docker-x86_64.tar` 的形式挂在 [Releases](../../releases) 里——不方便连镜像仓库的机器可以直接下载这个离线包:`docker load -i rustdesk-server-combined-docker-x86_64.tar`。
+
+## 已知问题
+
+**安装或运行时窗口彻底纯白/空白(远程会话场景)。** 客户端本身已经会自动检测经典 RDP 会话
+(`flutter/windows/runner/main.cpp` 里用 `GetSystemMetrics(SM_REMOTESESSION)` 判断,另外 `--install`、
+`--cm` 进程无条件触发),识别到就把 Flutter 渲染后端切成软件渲染(`ANGLE_DEFAULT_PLATFORM=swiftshader`),
+绕开 ANGLE 的 Direct3D 路径在某些 RDP 虚拟显示适配器上完全画不出内容的问题。但这个自动检测覆盖不了所有远程访问
+场景(实测遇到过一台机器,安装向导窗口整个彻底纯白,什么都没有)。遇到这种情况,不要直接双击 exe,改用包装一层
+的方式启动,强制整条进程链都走软件渲染:
+```bat
+set ANGLE_DEFAULT_PLATFORM=swiftshader
+start "" "rustdesk-vless-ssh-1.4.9-x86_64.exe"
+```
+(子进程会继承父进程的环境变量,这样 packer、安装步骤、主程序一次性全覆盖,不用重启或重新登录就能生效。)

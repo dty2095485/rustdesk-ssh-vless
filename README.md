@@ -118,3 +118,20 @@ example values until you configure it.
   Also attached to [Releases](../../releases) as `rustdesk-server-combined-docker-x86_64.tar` —
   an offline `docker load`-compatible tarball of the same image, for machines without registry
   access: `docker load -i rustdesk-server-combined-docker-x86_64.tar`.
+
+## Known issues
+
+**Completely blank/white window when installing or running over a remote session.** The client
+already auto-detects classic RDP sessions (`flutter/windows/runner/main.cpp` checks
+`GetSystemMetrics(SM_REMOTESESSION)`, plus always for the `--install` and `--cm` processes) and
+switches Flutter's renderer to software mode (`ANGLE_DEFAULT_PLATFORM=swiftshader`) to work around
+ANGLE's Direct3D path painting nothing on some RDP virtual display adapters. That detection can
+miss some remote-access setups (observed on a real machine where the installer window came up
+solid white with no content at all). If that happens, force software rendering for the whole
+process tree by launching through a wrapper instead of the exe directly:
+```bat
+set ANGLE_DEFAULT_PLATFORM=swiftshader
+start "" "rustdesk-vless-ssh-1.4.9-x86_64.exe"
+```
+(child processes inherit the parent's environment, so this covers the packer, the install step,
+and the main app in one shot, with no reboot/re-login needed to pick up the setting.)
