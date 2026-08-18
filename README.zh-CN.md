@@ -54,6 +54,17 @@
 
 1. 客户端:参考 `client/README.md`(官方 RustDesk 的构建文档同样适用),再加上上面那些环境变量。
    核心 DLL **必须**用 `cargo build --release --locked --features flutter` 编译(`flutter` 不在 Cargo.toml 的 `default` feature 列表里)——只跑 `cargo build --release` 会悄悄把整个 UI 依赖的 flutter_rust_bridge FFI 层编译掉,产物看起来正常,体积却小了将近 19MB,实际是没接上界面的坏包。
+
+   **先生成 FFI 桥接代码**——`client/src/bridge_generated.rs` 和 `client/flutter/lib/generated_bridge.dart`
+   跟官方一样都被 `.gitignore` 排除了,这个仓库里没有,新克隆下来不跑一遍代码生成工具是编译不过的:
+   ```
+   cargo install flutter_rust_bridge_codegen --version 1.80.1 --features "uuid" --locked
+   cd client
+   flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
+   ```
+   (还需要 `flutter` 在 PATH 里,用来跑 Dart 格式化那一步)。漏了这一步会报
+   `error[E0583]: file not found for module 'bridge_generated'`,然后连带炸出一堆看起来毫不相关的
+   `EventToUI: IntoIntoDart<_>` trait 报错——这个坑真的踩过一次,查了很久才找到真正原因。
 2. 服务端:在 `server/` 目录下 `cargo build --release`,同样加上上面的环境变量。
 3. Windows 自解压 exe:`build_portable.ps1`(脚本开头写死了本机路径,换机器要自己改)。这个脚本调用的是
    RustDesk 官方自带的打包工具 `client/libs/portable/`(需要 Python 3,并在那个目录下

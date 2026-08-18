@@ -69,6 +69,19 @@ example values until you configure it.
    (`flutter` is not in Cargo.toml's `default` features) — a plain `cargo build --release`
    silently compiles out the whole flutter_rust_bridge FFI layer the UI depends on, producing
    a DLL about 19MB smaller that looks fine but isn't wired up to the app.
+
+   **First, generate the FFI bridge** — `client/src/bridge_generated.rs` and
+   `client/flutter/lib/generated_bridge.dart` are gitignored (matching upstream) and not in
+   this repo, so a fresh clone won't compile without running codegen first:
+   ```
+   cargo install flutter_rust_bridge_codegen --version 1.80.1 --features "uuid" --locked
+   cd client
+   flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
+   ```
+   (needs `flutter` on PATH too, for the Dart-formatting step). Skipping this produces
+   `error[E0583]: file not found for module 'bridge_generated'`, which then cascades into a pile
+   of unrelated-looking `EventToUI: IntoIntoDart<_>` trait errors that have nothing to do with
+   the real cause — lost real time to that exact red herring once already.
 2. Server: `cargo build --release` inside `server/`, plus the env vars above.
 3. Windows self-extracting exe: `build_portable.ps1` (edit the hardcoded local paths at the top
    for your machine). This drives RustDesk's own official packer at `client/libs/portable/`
