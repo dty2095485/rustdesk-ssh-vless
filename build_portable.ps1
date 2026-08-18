@@ -33,20 +33,30 @@ New-Item -ItemType Directory -Path $payload | Out-Null
 Copy-Item -Path "$flutterRelease\*" -Destination $payload -Recurse -Force
 Copy-Item -LiteralPath $coreDll -Destination "$payload\librustdesk.dll" -Force
 
-# Upstream CI strips this so the packer's own DPI-awareness setting (set in
-# libs/portable's own manifest handling) is the one that applies; harmless to
-# repeat on an already-stripped manifest.
-(Get-Content -LiteralPath $manifest) | Where-Object { $_ -notmatch 'dpiAware' } | Set-Content -LiteralPath $manifest
-
-Push-Location $portable
+# res/manifest.xml is shared with the main client build (both build.rs and
+# libs/portable/build.rs embed it via winres). Upstream CI strips dpiAware
+# from it only for the packer step -- by then the main app is already built
+# from the intact version, so this only affects the packer's own manifest.
+# Do the same here, but on a backup/restore basis so this script never leaves
+# the shared file permanently mutated for whatever builds the main app next.
+$manifestBackup = "$manifest.bak"
+Copy-Item -LiteralPath $manifest -Destination $manifestBackup -Force
 try {
-    if (Test-Path 'data.bin') { Remove-Item 'data.bin' -Force }
-    python .\generate.py -f "$payload\" -o . -e "$payload\rustdesk.exe"
-    if ($LASTEXITCODE -ne 0) { throw "generate.py failed: $LASTEXITCODE" }
-    cargo build --locked --release
-    if ($LASTEXITCODE -ne 0) { throw "cargo build failed: $LASTEXITCODE" }
+    (Get-Content -LiteralPath $manifest) | Where-Object { $_ -notmatch 'dpiAware' } | Set-Content -LiteralPath $manifest
+
+    Push-Location $portable
+    try {
+        if (Test-Path 'data.bin') { Remove-Item 'data.bin' -Force }
+        python .\generate.py -f "$payload\" -o . -e "$payload\rustdesk.exe"
+        if ($LASTEXITCODE -ne 0) { throw "generate.py failed: $LASTEXITCODE" }
+        cargo build --locked --release
+        if ($LASTEXITCODE -ne 0) { throw "cargo build failed: $LASTEXITCODE" }
+    } finally {
+        Pop-Location
+    }
 } finally {
-    Pop-Location
+    Copy-Item -LiteralPath $manifestBackup -Destination $manifest -Force
+    Remove-Item -LiteralPath $manifestBackup -Force
 }
 
 $built = "$repo\target\release\rustdesk-portable-packer.exe"
