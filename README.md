@@ -1,5 +1,7 @@
 # RustDesk SSH+VLESS
 
+English | [简体中文](README.zh-CN.md)
+
 A self-hosted [RustDesk](https://github.com/rustdesk/rustdesk) fork that adds two extra
 transport modes on top of the stock protocol:
 
