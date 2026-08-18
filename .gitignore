@@ -1,0 +1,33 @@
+# Build outputs / caches
+target/
+build/
+.dart_tool/
+.pub-cache/
+**/flutter/*/ephemeral/
+**/flutter/build/
+Pods/
+DerivedData/
+*.o
+*.obj
+*.dll
+*.exe
+!server/ui/setup/service/nssm.exe
+*.tar
+*.tar.gz
+*.zip
+*.log
+
+# Never commit key material
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+known_hosts
+.sshkeys/
+.ssh/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

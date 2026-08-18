@@ -1,0 +1,18 @@
+#!/command/with-contenv sh
+set -eu
+
+: "${VLESS_UUID:?Set VLESS_UUID outside the image}"
+: "${VLESS_CERT:?Set VLESS_CERT to the mounted certificate path}"
+: "${VLESS_KEY:?Set VLESS_KEY to the mounted private-key path}"
+
+if [ ! -r "$VLESS_CERT" ]; then
+    echo "VLESS certificate is not readable: $VLESS_CERT" >&2
+    exit 1
+fi
+if [ ! -r "$VLESS_KEY" ]; then
+    echo "VLESS private key is not readable: $VLESS_KEY" >&2
+    exit 1
+fi
+
+exec /usr/bin/hbvless
+

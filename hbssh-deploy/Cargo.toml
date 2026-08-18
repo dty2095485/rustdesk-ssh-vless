@@ -1,0 +1,14 @@
+[package]
+name = "hbssh"
+version = "1.1.17"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.11"
+tokio = { version = "1", features = ["full"] }
+russh = { version = "0.62", default-features = false, features = ["ring", "rsa"] }
+
+[profile.release]
+strip = true

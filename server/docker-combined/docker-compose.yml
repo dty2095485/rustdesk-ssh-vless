@@ -1,0 +1,38 @@
+name: rustdesk-combined-canary
+
+services:
+  rustdesk-combined:
+    container_name: rustdesk-combined-canary
+    image: ${IMAGE_TAG:-rustdesk-server-combined:canary}
+    build:
+      context: ..
+      dockerfile: docker-combined/Dockerfile
+      args:
+        S6_ARCH: ${S6_ARCH:-x86_64}
+    environment:
+      RELAY: ${RELAY:?Set RELAY in .env}
+      ENCRYPTED_ONLY: ${ENCRYPTED_ONLY:-0}
+      RUST_LOG: ${RUST_LOG:-info}
+      VLESS_UUID: ${VLESS_UUID:?Set VLESS_UUID in the untracked .env file}
+      VLESS_TLS_HANDSHAKE_TIMEOUT_SECS: ${VLESS_TLS_HANDSHAKE_TIMEOUT_SECS:-10}
+      VLESS_HEADER_TIMEOUT_SECS: ${VLESS_HEADER_TIMEOUT_SECS:-10}
+      VLESS_UPSTREAM_CONNECT_TIMEOUT_SECS: ${VLESS_UPSTREAM_CONNECT_TIMEOUT_SECS:-5}
+      VLESS_MAX_CONNECTIONS: ${VLESS_MAX_CONNECTIONS:-1024}
+      SSH_AUTHORIZED_KEYS: ${SSH_AUTHORIZED_KEYS:-}
+    ports:
+      - "21115:21115/tcp"
+      - "21116:21116/tcp"
+      - "21116:21116/udp"
+      - "21117:21117/tcp"
+      - "21118:21118/tcp"
+      - "21119:21119/tcp"
+      - "127.0.0.1:8443:8443/tcp"
+      - "${SSH_HOST_PORT:-22}:22/tcp"
+    volumes:
+      - ./data:/data
+      - ${TLS_CERT_FILE:?Set TLS_CERT_FILE in .env}:/run/tls/fullchain.pem:ro
+      - ${TLS_KEY_FILE:?Set TLS_KEY_FILE in .env}:/run/tls/privkey.pem:ro
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true

@@ -1,0 +1,13 @@
+#!/command/with-contenv sh
+set -eu
+
+: "${RELAY:?Set RELAY to the public RustDesk relay host and port}"
+cd /data
+
+set -- /usr/bin/hbbs -r "$RELAY"
+if [ "${ENCRYPTED_ONLY:-0}" = "1" ]; then
+    set -- "$@" -k _
+fi
+
+exec "$@"
+

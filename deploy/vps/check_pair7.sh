@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+docker logs --since 900s rustdesk_rrsc-rustdesk_rrsC-1 2>&1 | grep -iE 'relay request|paired|Punch hole|auth' | tail -20
