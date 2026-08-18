@@ -63,6 +63,10 @@ example values until you configure it.
 ## Building
 
 1. Client: see `client/README.md` (upstream RustDesk build docs apply) plus the env vars above.
+   The core DLL **must** be built with `cargo build --release --locked --features flutter`
+   (`flutter` is not in Cargo.toml's `default` features) — a plain `cargo build --release`
+   silently compiles out the whole flutter_rust_bridge FFI layer the UI depends on, producing
+   a DLL about 19MB smaller that looks fine but isn't wired up to the app.
 2. Server: `cargo build --release` inside `server/`, plus the env vars above.
 3. Windows installer: `build_installer.ps1` (edit the hardcoded local paths at the top for your machine).
 4. Combined server+gateway image (`hbbs`+`hbbr`+`hbvless`+`hbssh` in one container):
