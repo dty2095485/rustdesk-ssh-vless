@@ -1903,6 +1903,23 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                     );
                   },
                 ),
+              if (!hideProxy) divider,
+              if (!hideProxy)
+                listTile(
+                  icon: Icons.import_export_outlined,
+                  title: 'Import/export all config',
+                  onTap: () async {
+                    await importFullConfig();
+                    setState(() {});
+                  },
+                  trailing: Tooltip(
+                    message: translate('Export config'),
+                    child: IconButton(
+                      icon: const Icon(Icons.save_outlined, color: Colors.grey),
+                      onPressed: exportFullConfig,
+                    ),
+                  ),
+                ),
               if (!hideWebSocket && (!hideServer || !hideProxy)) divider,
               if (!hideWebSocket)
                 switchWidget(
@@ -3395,6 +3412,103 @@ Future<void> changeVless() async {
       onCancel: close,
     );
   });
+}
+
+// Combines the existing ID/relay/API/key export with the VLESS and SSH
+// settings (neither of which the built-in clipboard export covers) into one
+// file, so a whole connection profile can be moved between machines at once.
+Future<void> exportFullConfig() async {
+  final options = Map<String, dynamic>.from(jsonDecode(await bind.mainGetOptions()));
+  final sc = ServerConfig.fromOptions(options);
+  final vless = await bind.mainGetVless();
+  final ssh = await bind.mainGetSsh();
+  final data = {
+    'version': 1,
+    'server': {
+      'host': sc.idServer,
+      'relay': sc.relayServer,
+      'api': sc.apiServer,
+      'key': sc.key,
+    },
+    'vless': {
+      'server': vless.isNotEmpty ? vless[0] : '',
+      'port': vless.length > 1 ? vless[1] : '443',
+      'uuid': vless.length > 2 ? vless[2] : '',
+      'server_name': vless.length > 3 ? vless[3] : '',
+      'enabled': vless.length > 4 ? vless[4] : 'N',
+    },
+    'ssh': {
+      'server': ssh.isNotEmpty ? ssh[0] : '',
+      'port': ssh.length > 1 ? ssh[1] : '22',
+      'username': ssh.length > 2 ? ssh[2] : '',
+      'public_key': ssh.length > 3 ? ssh[3] : '',
+      'private_key': ssh.length > 4 ? ssh[4] : '',
+      'enabled': ssh.length > 5 ? ssh[5] : 'N',
+    },
+  };
+  final path = await FilePicker.platform.saveFile(
+    dialogTitle: translate('Export config'),
+    fileName: 'rustdesk_config.json',
+    type: FileType.custom,
+    allowedExtensions: ['json'],
+  );
+  if (path == null) return;
+  try {
+    await File(path)
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+    showToast(translate('Export server configuration successfully'));
+  } catch (e) {
+    showToast('${translate('Failed')}: $e');
+  }
+}
+
+Future<void> importFullConfig() async {
+  final result = await FilePicker.platform.pickFiles(
+    dialogTitle: translate('Import config'),
+    type: FileType.custom,
+    allowedExtensions: ['json'],
+  );
+  final path = result?.files.single.path;
+  if (path == null) return;
+  try {
+    final data = Map<String, dynamic>.from(
+        jsonDecode(await File(path).readAsString()));
+    final server = Map<String, dynamic>.from(data['server'] ?? {});
+    final vless = Map<String, dynamic>.from(data['vless'] ?? {});
+    final ssh = Map<String, dynamic>.from(data['ssh'] ?? {});
+    if (server.isNotEmpty) {
+      await setServerConfig(
+        null,
+        null,
+        ServerConfig(
+          idServer: server['host'] ?? '',
+          relayServer: server['relay'] ?? '',
+          apiServer: server['api'] ?? '',
+          key: server['key'] ?? '',
+        ),
+      );
+    }
+    if (vless.isNotEmpty) {
+      await bind.mainSetVless(
+        server: vless['server'] ?? '',
+        port: (vless['port'] ?? '443').toString(),
+        uuid: vless['uuid'] ?? '',
+        serverName: vless['server_name'] ?? '',
+      );
+    }
+    if (ssh.isNotEmpty) {
+      await bind.mainSetSsh(
+        server: ssh['server'] ?? '',
+        port: (ssh['port'] ?? '22').toString(),
+        username: ssh['username'] ?? '',
+        publicKey: ssh['public_key'] ?? '',
+        privateKey: ssh['private_key'] ?? '',
+      );
+    }
+    showToast(translate('Import server configuration successfully'));
+  } catch (e) {
+    showToast(translate('Invalid server configuration'));
+  }
 }
 
 List<String> _sshCache = [];

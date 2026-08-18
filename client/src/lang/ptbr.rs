@@ -772,5 +772,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("whitelist_cidr_tip", "A notação CIDR é suportada, por exemplo 192.168.1.0/24"),
         ("Continue", "Continuar"),
         ("Browser didn't open? Use the url below to sign in.", "O navegador não foi aberto? Use a URL abaixo para fazer login."),
+        ("Import/export all config", ""),
+        ("Export config", ""),
+        ("Import config", ""),
     ].iter().cloned().collect();
 }
