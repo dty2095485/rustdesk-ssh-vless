@@ -92,6 +92,16 @@ example values until you configure it.
    11 machine (confirmed by comparing the working, official-style build against it) — being
    unsigned and using an unusual/uncommon self-extraction structure both hurt it there, and the
    official packer only fixes the second half of that.
+
+   `build_portable.ps1` also downloads and bundles the two Windows drivers upstream ships this
+   way (they're prebuilt/signed elsewhere — driver signing needs real certification, not
+   something a plain `cargo`/`flutter` build produces): `usbmmidd_v2` (virtual monitor, for
+   controlling a headless machine) from `rustdesk-org/rdev`'s releases, and
+   `RustDeskPrinterDriver` + `printer_driver_adapter.dll` (remote printing) from
+   `rustdesk/hbb_common`'s releases — both checked against a published/pinned SHA256 before
+   being unpacked. Diffing a byte-parsed manifest of a real official 1.4.9 download against our
+   own build is what surfaced these as the actual explanation for an installer-size gap that
+   first looked suspicious — turned out to be fully accounted for, not anything hidden.
 4. Combined server+gateway image (`hbbs`+`hbbr`+`hbvless`+`hbssh` in one container):
    `server/docker-combined/Dockerfile` if you have Docker; or
    `server/docker-combined/build-offline-image.sh` to build and push straight to a registry

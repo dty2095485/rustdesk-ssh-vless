@@ -51,6 +51,73 @@ Copy-Item -Path "$flutterRelease\*" -Destination $payload -Recurse -Force
 Copy-Item -LiteralPath $coreDll -Destination "$payload\librustdesk.dll" -Force
 Copy-Item -LiteralPath $virtualDisplayDll -Destination "$payload\dylib_virtual_display.dll" -Force
 
+# Virtual-monitor and remote-printer support: upstream CI downloads these as
+# prebuilt, separately-signed Windows drivers (driver signing needs a real
+# cert + Microsoft attestation, which a plain cargo/flutter build can't
+# produce) rather than building them from this source tree. Comparing our
+# build against a real official release (byte-level manifest extracted from
+# the self-extracting payload format) is what surfaced these as the actual
+# explanation for a size gap, not anything wrong with this fork's own code.
+$driverCache = "$root\driver-cache"
+New-Item -ItemType Directory -Path $driverCache -Force | Out-Null
+
+# usbmmidd (virtual monitor driver) -- upstream's own script does not publish
+# a checksum for this one, so pin the hash of what we verified when this
+# step was added; a change here means investigate before trusting it, not a
+# routine "checksums differ, re-pin".
+$usbmmiddZip = "$driverCache\usbmmidd_v2.zip"
+$usbmmiddKnownSha256 = '629B51E9944762BAE73948171C65D09A79595CF4C771A82EBC003FBBA5B24F51'
+if (!(Test-Path -LiteralPath $usbmmiddZip)) {
+    Invoke-WebRequest -Uri 'https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip' -OutFile $usbmmiddZip
+}
+$usbmmiddActual = (Get-FileHash -LiteralPath $usbmmiddZip -Algorithm SHA256).Hash
+if ($usbmmiddActual -ne $usbmmiddKnownSha256) {
+    throw "usbmmidd_v2.zip SHA256 mismatch: expected $usbmmiddKnownSha256, got $usbmmiddActual -- upstream has no published checksum for this file, so do not blindly re-pin; check why it changed first."
+}
+$usbmmiddExtract = "$driverCache\usbmmidd_v2_extracted"
+if (Test-Path -LiteralPath $usbmmiddExtract) { Remove-Item -LiteralPath $usbmmiddExtract -Recurse -Force }
+Expand-Archive -LiteralPath $usbmmiddZip -DestinationPath $usbmmiddExtract -Force
+Remove-Item -Path "$usbmmiddExtract\usbmmidd_v2\Win32" -Recurse -Force
+Remove-Item -Path "$usbmmiddExtract\usbmmidd_v2\deviceinstaller64.exe", "$usbmmiddExtract\usbmmidd_v2\deviceinstaller.exe", "$usbmmiddExtract\usbmmidd_v2\usbmmidd.bat" -Force
+Copy-Item -Path "$usbmmiddExtract\usbmmidd_v2" -Destination "$payload\usbmmidd_v2" -Recurse -Force
+
+# Remote-printer driver -- upstream's own script publishes and checks SHA256
+# for these two; do the same rather than trusting the download blindly.
+$printerDriverZip = "$driverCache\rustdesk_printer_driver_v4-1.4.zip"
+$printerAdapterZip = "$driverCache\printer_driver_adapter.zip"
+$printerSums = "$driverCache\sha256sums"
+if (!(Test-Path -LiteralPath $printerDriverZip)) {
+    Invoke-WebRequest -Uri 'https://github.com/rustdesk/hbb_common/releases/download/driver/rustdesk_printer_driver_v4-1.4.zip' -OutFile $printerDriverZip
+}
+if (!(Test-Path -LiteralPath $printerAdapterZip)) {
+    Invoke-WebRequest -Uri 'https://github.com/rustdesk/hbb_common/releases/download/driver/printer_driver_adapter.zip' -OutFile $printerAdapterZip
+}
+Invoke-WebRequest -Uri 'https://github.com/rustdesk/hbb_common/releases/download/driver/sha256sums' -OutFile $printerSums
+
+$sums = Get-Content -LiteralPath $printerSums
+$expectDriver = ($sums | Select-String -Pattern '^([a-fA-F0-9]{64}) \*rustdesk_printer_driver_v4-1\.4\.zip$').Matches.Groups[1].Value
+$expectAdapter = ($sums | Select-String -Pattern '^([a-fA-F0-9]{64}) \*printer_driver_adapter\.zip$').Matches.Groups[1].Value
+$actualDriver = (Get-FileHash -LiteralPath $printerDriverZip -Algorithm SHA256).Hash
+$actualAdapter = (Get-FileHash -LiteralPath $printerAdapterZip -Algorithm SHA256).Hash
+if (!$expectDriver -or !$expectAdapter) {
+    throw "Could not find expected hashes in sha256sums for the printer driver files"
+}
+if ($actualDriver -ne $expectDriver) {
+    throw "rustdesk_printer_driver_v4-1.4.zip SHA256 mismatch: expected $expectDriver, got $actualDriver"
+}
+if ($actualAdapter -ne $expectAdapter) {
+    throw "printer_driver_adapter.zip SHA256 mismatch: expected $expectAdapter, got $actualAdapter"
+}
+$printerExtract = "$driverCache\printer_extracted"
+$adapterExtract = "$driverCache\adapter_extracted"
+if (Test-Path -LiteralPath $printerExtract) { Remove-Item -LiteralPath $printerExtract -Recurse -Force }
+if (Test-Path -LiteralPath $adapterExtract) { Remove-Item -LiteralPath $adapterExtract -Recurse -Force }
+Expand-Archive -LiteralPath $printerDriverZip -DestinationPath $printerExtract -Force
+Expand-Archive -LiteralPath $printerAdapterZip -DestinationPath $adapterExtract -Force
+New-Item -ItemType Directory -Path "$payload\drivers" -Force | Out-Null
+Copy-Item -Path "$printerExtract\rustdesk_printer_driver_v4-1.4" -Destination "$payload\drivers\RustDeskPrinterDriver" -Recurse -Force
+Copy-Item -LiteralPath "$adapterExtract\printer_driver_adapter.dll" -Destination "$payload\printer_driver_adapter.dll" -Force
+
 # res/manifest.xml is shared with the main client build (both build.rs and
 # libs/portable/build.rs embed it via winres). Upstream CI strips dpiAware
 # from it only for the packer step -- by then the main app is already built

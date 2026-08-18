@@ -73,6 +73,13 @@
    这种打包方式在一台确认是普通 x64 的 Windows 11 电脑上被 Windows 智能应用控制(Smart App Control)拦截了
    (对比过换成官方同款打包方式之后能正常装,确认了这一点)——没签名、加上这种不常见的自解压结构,两个因素都在起作用,
    换成官方打包工具只解决了后一半。
+
+   `build_portable.ps1` 还会下载并打包官方也是靠"外部现成签名驱动"这条路走的两个组件(驱动签名需要走正式认证流程,
+   普通 `cargo`/`flutter` 构建编不出来):虚拟显示器驱动 `usbmmidd_v2`(用于操控没接显示器的机器),来自
+   `rustdesk-org/rdev` 的 Release;远程打印驱动 `RustDeskPrinterDriver` + `printer_driver_adapter.dll`,来自
+   `rustdesk/hbb_common` 的 Release——两个都会先核对 SHA256(一个是官方发布的校验和,一个是固定写死在脚本里的)
+   再解压。这两个东西是靠"把官方真实下载的 exe 解析出内嵌文件清单,逐个文件比对哈希"这个方法揪出来的——一开始看着
+   像体积对不上很可疑,查到最后发现完全说得清楚,不是被藏了什么东西。
 4. 服务端+网关四合一镜像(`hbbs`+`hbbr`+`hbvless`+`hbssh` 打进一个容器):
    有 Docker 的话直接用 `server/docker-combined/Dockerfile`;
    没有本地 Docker 引擎的话,用 `server/docker-combined/build-offline-image.sh`,靠 [crane](https://github.com/google/go-containerregistry) 直接构建并推送到镜像仓库。
