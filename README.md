@@ -82,6 +82,6 @@ example values until you configure it.
 - Combined server+gateway image: `ghcr.io/dty2095485/rustdesk-server-combined:latest`
   (also built without any personal config baked in; configure via the container's `RELAY`,
   `VLESS_UUID`, `VLESS_CERT`, `VLESS_KEY`, `SSH_AUTHORIZED_KEYS` env vars / mounts).
-  Also attached to [Releases](../../releases) as `rustdesk-server-combined-x86_64.tar` — an
-  offline `docker load`-compatible tarball of the same image, for machines without registry
-  access: `docker load -i rustdesk-server-combined-x86_64.tar`.
+  Also attached to [Releases](../../releases) as `rustdesk-server-combined-docker-x86_64.tar` —
+  an offline `docker load`-compatible tarball of the same image, for machines without registry
+  access: `docker load -i rustdesk-server-combined-docker-x86_64.tar`.
