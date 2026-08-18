@@ -55,7 +55,13 @@
 1. 客户端:参考 `client/README.md`(官方 RustDesk 的构建文档同样适用),再加上上面那些环境变量。
    核心 DLL **必须**用 `cargo build --release --locked --features flutter` 编译(`flutter` 不在 Cargo.toml 的 `default` feature 列表里)——只跑 `cargo build --release` 会悄悄把整个 UI 依赖的 flutter_rust_bridge FFI 层编译掉,产物看起来正常,体积却小了将近 19MB,实际是没接上界面的坏包。
 2. 服务端:在 `server/` 目录下 `cargo build --release`,同样加上上面的环境变量。
-3. Windows 安装包:`build_installer.ps1`(脚本开头写死了本机路径,换机器要自己改)。
+3. Windows 自解压 exe:`build_portable.ps1`(脚本开头写死了本机路径,换机器要自己改)。这个脚本调用的是
+   RustDesk 官方自带的打包工具 `client/libs/portable/`(需要 Python 3,并在那个目录下
+   `pip install -r requirements.txt`)——和官方正式发布版用的是同一套工具,编出来的是原生 Rust exe。
+   `installer/` + `build_installer.ps1`(用 C#/`csc.exe` 手写的自解压 stub)保留下来仅供参考,**不建议再用**:
+   这种打包方式在一台确认是普通 x64 的 Windows 11 电脑上被 Windows 智能应用控制(Smart App Control)拦截了
+   (对比过换成官方同款打包方式之后能正常装,确认了这一点)——没签名、加上这种不常见的自解压结构,两个因素都在起作用,
+   换成官方打包工具只解决了后一半。
 4. 服务端+网关四合一镜像(`hbbs`+`hbbr`+`hbvless`+`hbssh` 打进一个容器):
    有 Docker 的话直接用 `server/docker-combined/Dockerfile`;
    没有本地 Docker 引擎的话,用 `server/docker-combined/build-offline-image.sh`,靠 [crane](https://github.com/google/go-containerregistry) 直接构建并推送到镜像仓库。

@@ -70,7 +70,15 @@ example values until you configure it.
    silently compiles out the whole flutter_rust_bridge FFI layer the UI depends on, producing
    a DLL about 19MB smaller that looks fine but isn't wired up to the app.
 2. Server: `cargo build --release` inside `server/`, plus the env vars above.
-3. Windows installer: `build_installer.ps1` (edit the hardcoded local paths at the top for your machine).
+3. Windows self-extracting exe: `build_portable.ps1` (edit the hardcoded local paths at the top
+   for your machine). This drives RustDesk's own official packer at `client/libs/portable/`
+   (needs Python 3 + `pip install -r requirements.txt` there) — the same tool upstream RustDesk's
+   real releases use, producing a native Rust exe. `installer/` + `build_installer.ps1` (a
+   hand-rolled C#/`csc.exe` self-extracting stub) are kept for reference but **not recommended**:
+   that packaging shape got blocked by Windows Smart App Control on at least one real x64 Windows
+   11 machine (confirmed by comparing the working, official-style build against it) — being
+   unsigned and using an unusual/uncommon self-extraction structure both hurt it there, and the
+   official packer only fixes the second half of that.
 4. Combined server+gateway image (`hbbs`+`hbbr`+`hbvless`+`hbssh` in one container):
    `server/docker-combined/Dockerfile` if you have Docker; or
    `server/docker-combined/build-offline-image.sh` to build and push straight to a registry
