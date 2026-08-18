@@ -8,6 +8,10 @@ transport modes on top of the stock protocol:
 - **VLESS + TCP + TLS** — routes traffic through a VLESS gateway (`hbssh`) for use behind
   restrictive networks, with a domain/SNI that looks like ordinary HTTPS.
 
+The client also adds a combined config import/export (Settings → Network →
+"Import/export all config"): a single JSON file for the ID/relay/API/key server settings plus
+VLESS and SSH, on top of upstream's clipboard-only ID/relay/API/key export.
+
 ## Layout
 
 | Path | What it is |
@@ -61,3 +65,16 @@ example values until you configure it.
 1. Client: see `client/README.md` (upstream RustDesk build docs apply) plus the env vars above.
 2. Server: `cargo build --release` inside `server/`, plus the env vars above.
 3. Windows installer: `build_installer.ps1` (edit the hardcoded local paths at the top for your machine).
+4. Combined server+gateway image (`hbbs`+`hbbr`+`hbvless`+`hbssh` in one container):
+   `server/docker-combined/Dockerfile` if you have Docker; or
+   `server/docker-combined/build-offline-image.sh` to build and push straight to a registry
+   with [crane](https://github.com/google/go-containerregistry) and no local Docker daemon.
+
+## Published artifacts
+
+- Windows installer: see [Releases](../../releases) — built with placeholder connection settings
+  only (no real server baked in); import your own config after install via
+  Settings → Network → "Import/export all config", or rebuild with the env vars above.
+- Combined server+gateway image: `ghcr.io/dty2095485/rustdesk-server-combined:latest`
+  (also built without any personal config baked in; configure via the container's `RELAY`,
+  `VLESS_UUID`, `VLESS_CERT`, `VLESS_KEY`, `SSH_AUTHORIZED_KEYS` env vars / mounts).
