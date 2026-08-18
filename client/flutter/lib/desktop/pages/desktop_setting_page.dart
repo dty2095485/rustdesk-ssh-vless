@@ -1903,23 +1903,6 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                     );
                   },
                 ),
-              if (!hideProxy) divider,
-              if (!hideProxy)
-                listTile(
-                  icon: Icons.import_export_outlined,
-                  title: 'Import/export all config',
-                  onTap: () async {
-                    await importFullConfig();
-                    setState(() {});
-                  },
-                  trailing: Tooltip(
-                    message: translate('Export config'),
-                    child: IconButton(
-                      icon: const Icon(Icons.save_outlined, color: Colors.grey),
-                      onPressed: exportFullConfig,
-                    ),
-                  ),
-                ),
               if (!hideWebSocket && (!hideServer || !hideProxy)) divider,
               if (!hideWebSocket)
                 switchWidget(
@@ -1970,6 +1953,36 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                       );
                     }
                   },
+                ),
+              if (!hideProxy) divider,
+              if (!hideProxy)
+                listTile(
+                  icon: Icons.import_export_outlined,
+                  title: 'Import/export all config',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: translate('Import config'),
+                        child: IconButton(
+                          icon: const Icon(Icons.folder_open_outlined,
+                              color: Colors.grey),
+                          onPressed: () async {
+                            await importFullConfig();
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      Tooltip(
+                        message: translate('Export config'),
+                        child: IconButton(
+                          icon: const Icon(Icons.save_outlined,
+                              color: Colors.grey),
+                          onPressed: exportFullConfig,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
