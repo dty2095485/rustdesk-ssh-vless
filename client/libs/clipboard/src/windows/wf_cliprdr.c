@@ -892,12 +892,15 @@ static CliprdrStream *CliprdrStream_New(UINT32 connID, ULONG index, void *pData,
 			if (((instance->m_Dsc.dwFlags & FD_FILESIZE) == 0) && !isDir)
 			{
 				/* get content size of this stream */
+				ULONGLONG _trace_t0 = GetTickCount64();
+				cliprdr_trace("[cliprdr-trace] CliprdrStream_New: FD_FILESIZE missing for file #%lu, sending extra FILECONTENTS_SIZE request...\n", (unsigned long)index);
 				if (cliprdr_send_request_filecontents(clipboard, instance->m_connID, instance->m_streamId,
 													  instance->m_lIndex, FILECONTENTS_SIZE, 0, 0,
 													  8, &response_data, &response_size) == CHANNEL_RC_OK)
 				{
 					success = TRUE;
 				}
+				cliprdr_trace("[cliprdr-trace] CliprdrStream_New: FILECONTENTS_SIZE for file #%lu done after %llu ms\n", (unsigned long)index, GetTickCount64() - _trace_t0);
 
 				if (response_data != NULL && response_size >= sizeof(LONGLONG))
 				{
@@ -2644,10 +2647,19 @@ static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t 
 	if (!fd)
 		return NULL;
 
-	// to-do: use `fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI`.
-	// We keep `fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI` for compatibility.
-	// fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
-	fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI;
+	// Upstream historically withheld FD_FILESIZE here even though the size is
+	// already known below (nFileSizeLow/High), forcing the receiving side's
+	// CliprdrDataObject_GetData(FILEDESCRIPTORW) to issue one extra blocking
+	// FILECONTENTS_SIZE round trip per *file* entry (CliprdrStream_New, see
+	// its `(dwFlags & FD_FILESIZE) == 0 && !isDir` check) before that single
+	// GetData call can return. For a folder with many files this serializes
+	// N network round trips inside one COM call, which is what stalls the
+	// right-click/paste menu for seconds on a folder while a lone file (one
+	// round trip) is imperceptible. Directories already skip this because
+	// isDir short-circuits the check, and that path is proven safe -- so
+	// setting FD_FILESIZE here just lets files take the same already-known-size
+	// path instead of re-fetching it.
+	fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
 
 	if (find_data)
 	{
