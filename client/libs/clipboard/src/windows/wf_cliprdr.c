@@ -2563,7 +2563,8 @@ error:
 }
 
 /* path_name has a '\' at the end. e.g. c:\newfolder\, file_name is c:\newfolder\new.txt */
-static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t pathLen)
+static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t pathLen,
+													   const WIN32_FIND_DATAW *find_data)
 {
 	HANDLE hFile = NULL;
 	FILEDESCRIPTORW *fd = NULL;
@@ -2572,42 +2573,61 @@ static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t 
 	if (!fd)
 		return NULL;
 
-	hFile = CreateFileW(file_name, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-						FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS, NULL);
-
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		free(fd);
-		return NULL;
-	}
-
 	// to-do: use `fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI`.
 	// We keep `fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI` for compatibility.
 	// fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
 	fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI;
-	fd->dwFileAttributes = GetFileAttributesW(file_name);
-	if (fd->dwFileAttributes == INVALID_FILE_ATTRIBUTES)
+
+	if (find_data)
 	{
-		// TODO: debug handle some errors
+		// Directory-tree entries already carry attributes/write-time/size from
+		// the FindNextFileW call that discovered them (wf_cliprdr_traverse_directory).
+		// Reuse that instead of reopening every file with CreateFileW + 3 more
+		// syscalls each, which is what makes pasting a large/deep folder slow
+		// to even start.
+		fd->dwFileAttributes = find_data->dwFileAttributes;
+		fd->ftLastWriteTime = find_data->ftLastWriteTime;
+		fd->nFileSizeLow = find_data->nFileSizeLow;
+		fd->nFileSizeHigh = find_data->nFileSizeHigh;
+	}
+	else
+	{
+		hFile = CreateFileW(file_name, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+							FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			free(fd);
+			return NULL;
+		}
+
+		fd->dwFileAttributes = GetFileAttributesW(file_name);
+		if (fd->dwFileAttributes == INVALID_FILE_ATTRIBUTES)
+		{
+			// TODO: debug handle some errors
+		}
+
+		if (!GetFileTime(hFile, NULL, NULL, &fd->ftLastWriteTime))
+		{
+			fd->dwFlags &= ~FD_WRITESTIME;
+		}
+
+		fd->nFileSizeLow = GetFileSize(hFile, &fd->nFileSizeHigh);
 	}
 
-	if (!GetFileTime(hFile, NULL, NULL, &fd->ftLastWriteTime))
-	{
-		fd->dwFlags &= ~FD_WRITESTIME;
-	}
-
-	fd->nFileSizeLow = GetFileSize(hFile, &fd->nFileSizeHigh);
 	if ((wcslen(file_name + pathLen) + 1) > sizeof(fd->cFileName) / sizeof(fd->cFileName[0]))
 	{
 		// The file name is too long, which is not a normal case.
 		// So we just return NULL.
-		CloseHandle(hFile);
+		if (hFile)
+			CloseHandle(hFile);
 		free(fd);
 		return NULL;
 	}
 
 	wcsncpy_s(fd->cFileName, sizeof(fd->cFileName) / sizeof(fd->cFileName[0]), file_name + pathLen, wcslen(file_name + pathLen) + 1);
-	CloseHandle(hFile);
+	if (hFile)
+		CloseHandle(hFile);
 
 	return fd;
 }
@@ -2644,7 +2664,7 @@ static BOOL wf_cliprdr_array_ensure_capacity(wfClipboard *clipboard)
 }
 
 static BOOL wf_cliprdr_add_to_file_arrays(wfClipboard *clipboard, WCHAR *full_file_name,
-										  size_t pathLen)
+										  size_t pathLen, const WIN32_FIND_DATAW *find_data)
 {
 	if (!clipboard || clipboard->nFiles >= WF_CLIPRDR_MAX_STREAMS)
 		return FALSE;
@@ -2666,7 +2686,7 @@ static BOOL wf_cliprdr_add_to_file_arrays(wfClipboard *clipboard, WCHAR *full_fi
 	wcsncpy_s(clipboard->file_names[clipboard->nFiles], MAX_PATH, full_file_name, wcslen(full_file_name) + 1);
 	/* add to descriptor array */
 	clipboard->fileDescriptor[clipboard->nFiles] =
-		wf_cliprdr_get_file_descriptor(full_file_name, pathLen);
+		wf_cliprdr_get_file_descriptor(full_file_name, pathLen, find_data);
 
 	if (!clipboard->fileDescriptor[clipboard->nFiles])
 	{
@@ -2728,7 +2748,7 @@ static BOOL wf_cliprdr_traverse_directory(wfClipboard *clipboard, WCHAR *Dir, si
 			StringCchCatW(DirAdd, MAX_PATH, L"\\");
 			StringCchCatW(DirAdd, MAX_PATH, FindFileData.cFileName);
 
-			if (!wf_cliprdr_add_to_file_arrays(clipboard, DirAdd, pathLen))
+			if (!wf_cliprdr_add_to_file_arrays(clipboard, DirAdd, pathLen, &FindFileData))
 				goto fail;
 
 			if (!wf_cliprdr_traverse_directory(clipboard, DirAdd, pathLen))
@@ -2743,7 +2763,7 @@ static BOOL wf_cliprdr_traverse_directory(wfClipboard *clipboard, WCHAR *Dir, si
 			StringCchCatW(fileName, MAX_PATH, L"\\");
 			StringCchCatW(fileName, MAX_PATH, FindFileData.cFileName);
 
-			if (!wf_cliprdr_add_to_file_arrays(clipboard, fileName, pathLen))
+			if (!wf_cliprdr_add_to_file_arrays(clipboard, fileName, pathLen, &FindFileData))
 				goto fail;
 		}
 	}
@@ -3105,7 +3125,7 @@ static BOOL wf_cliprdr_process_filename(wfClipboard *clipboard, WCHAR *wFileName
 
 	pathLen = offset + 1;
 
-	if (!wf_cliprdr_add_to_file_arrays(clipboard, wFileName, pathLen))
+	if (!wf_cliprdr_add_to_file_arrays(clipboard, wFileName, pathLen, NULL))
 		return FALSE;
 
 	if ((clipboard->fileDescriptor[clipboard->nFiles - 1]->dwFileAttributes &
