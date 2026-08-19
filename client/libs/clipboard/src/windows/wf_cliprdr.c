@@ -2647,17 +2647,18 @@ static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t 
 	if (!fd)
 		return NULL;
 
-	// REVERTED: setting FD_FILESIZE here (so files skip the extra
-	// FILECONTENTS_SIZE round trip in CliprdrStream_New, same as directories
-	// already do) caused Explorer's right-click/paste menu to hang completely
-	// on a real test -- worse than the slow-but-working original behavior, and
-	// closing the RustDesk client did not release the hang. Root cause not
-	// yet understood; do not re-enable without reproducing and diagnosing the
-	// hang first (test with a 2-3 file folder before anything larger).
-	// to-do: use `fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI`.
-	// We keep `fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI` for compatibility.
-	// fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
-	fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI;
+	// Files reuse the already-known size (nFileSizeLow/High, set just below)
+	// instead of forcing CliprdrStream_New to issue an extra blocking
+	// FILECONTENTS_SIZE round trip per file -- the same path directories
+	// already took. This was tried once before and reverted: it made
+	// Explorer's paste menu hang, most likely because the single dedicated
+	// worker thread that processed incoming clipboard messages back then
+	// (io_loop.rs's cliprdr_proc_sender) could self-deadlock if a response
+	// needed to unblock a wf_cliprdr.c wait got stuck behind another message
+	// in that single-threaded queue. That thread has since been replaced with
+	// a bounded worker pool (io_loop.rs's cliprdr_dispatch) specifically to
+	// remove that head-of-line blocking, so re-enabling this now.
+	fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
 
 	if (find_data)
 	{
