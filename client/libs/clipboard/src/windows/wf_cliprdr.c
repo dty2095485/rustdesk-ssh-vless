@@ -2647,19 +2647,17 @@ static FILEDESCRIPTORW *wf_cliprdr_get_file_descriptor(WCHAR *file_name, size_t 
 	if (!fd)
 		return NULL;
 
-	// Upstream historically withheld FD_FILESIZE here even though the size is
-	// already known below (nFileSizeLow/High), forcing the receiving side's
-	// CliprdrDataObject_GetData(FILEDESCRIPTORW) to issue one extra blocking
-	// FILECONTENTS_SIZE round trip per *file* entry (CliprdrStream_New, see
-	// its `(dwFlags & FD_FILESIZE) == 0 && !isDir` check) before that single
-	// GetData call can return. For a folder with many files this serializes
-	// N network round trips inside one COM call, which is what stalls the
-	// right-click/paste menu for seconds on a folder while a lone file (one
-	// round trip) is imperceptible. Directories already skip this because
-	// isDir short-circuits the check, and that path is proven safe -- so
-	// setting FD_FILESIZE here just lets files take the same already-known-size
-	// path instead of re-fetching it.
-	fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
+	// REVERTED: setting FD_FILESIZE here (so files skip the extra
+	// FILECONTENTS_SIZE round trip in CliprdrStream_New, same as directories
+	// already do) caused Explorer's right-click/paste menu to hang completely
+	// on a real test -- worse than the slow-but-working original behavior, and
+	// closing the RustDesk client did not release the hang. Root cause not
+	// yet understood; do not re-enable without reproducing and diagnosing the
+	// hang first (test with a 2-3 file folder before anything larger).
+	// to-do: use `fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI`.
+	// We keep `fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI` for compatibility.
+	// fd->dwFlags = FD_ATTRIBUTES | FD_FILESIZE | FD_WRITESTIME | FD_PROGRESSUI;
+	fd->dwFlags = FD_ATTRIBUTES | FD_WRITESTIME | FD_PROGRESSUI;
 
 	if (find_data)
 	{
