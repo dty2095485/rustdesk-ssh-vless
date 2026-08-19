@@ -2508,11 +2508,13 @@ impl<T: InvokeUiSession> Remote<T> {
                 } else {
                     self.client_conn_id
                 };
-                let _ = ContextSend::proc(|context| -> ResultType<()> {
-                    context
-                        .server_clip_file(context_conn_id, clip)
-                        .map_err(|e| e.into())
-                });
+                // Off-load to a dedicated thread (see cliprdr_proc_sender) instead of
+                // calling ContextSend::proc inline: this io_loop is a current_thread
+                // runtime, so a slow clipboard operation here (e.g. wf_cliprdr.c's
+                // synchronous directory walk for a large folder) would otherwise
+                // stall video-frame decoding and mouse/keyboard forwarding on this
+                // connection until it finished.
+                let _ = cliprdr_proc_sender().send((context_conn_id, clip));
             }
             #[cfg(feature = "unix-file-copy-paste")]
             if crate::is_support_file_copy_paste_num(self.handler.lc.read().unwrap().version) {
@@ -2621,6 +2623,31 @@ impl<T: InvokeUiSession> Remote<T> {
         msg.set_misc(misc);
         self.sender.send(Data::Message(msg)).ok();
     }
+}
+
+// A single dedicated thread that runs ContextSend::proc calls in the order
+// clipboard messages arrived, off whichever connection's io_loop dispatched
+// them. See the call site in handle_cliprdr_msg for why: that loop is a
+// current_thread runtime, and this call can block for a while (e.g. a full
+// directory walk in wf_cliprdr.c for a large pasted folder).
+#[cfg(target_os = "windows")]
+fn cliprdr_proc_sender() -> &'static std::sync::mpsc::Sender<(i32, clipboard::ClipboardFile)> {
+    use std::sync::OnceLock;
+    static SENDER: OnceLock<std::sync::mpsc::Sender<(i32, clipboard::ClipboardFile)>> =
+        OnceLock::new();
+    SENDER.get_or_init(|| {
+        let (tx, rx) = std::sync::mpsc::channel::<(i32, clipboard::ClipboardFile)>();
+        std::thread::spawn(move || {
+            while let Ok((context_conn_id, clip)) = rx.recv() {
+                let _ = ContextSend::proc(|context| -> ResultType<()> {
+                    context
+                        .server_clip_file(context_conn_id, clip)
+                        .map_err(|e| e.into())
+                });
+            }
+        });
+        tx
+    })
 }
 
 struct RemoveJob {
