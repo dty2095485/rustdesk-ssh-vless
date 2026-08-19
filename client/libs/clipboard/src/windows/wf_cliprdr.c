@@ -26,6 +26,7 @@
 #define COBJMACROS
 
 #include <ole2.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <shlobj.h>
 #include <wchar.h>
@@ -332,6 +333,22 @@ typedef struct _FORMAT_IDS FORMAT_IDS;
 	{                           \
 	} while (0)
 #endif
+
+/* Temporary always-on timing trace for diagnosing slow clipboard folder
+ * paste. Unlike DEBUG_CLIPRDR (fprintf(stderr,...), invisible for a normal
+ * windowed release build with no console), this uses OutputDebugStringA,
+ * which a tool like Sysinternals DebugView can capture live without a
+ * console or debugger attached to the process. Remove once the bottleneck
+ * is confirmed. */
+static void cliprdr_trace(const char *fmt, ...)
+{
+	char buf[256];
+	va_list args;
+	va_start(args, fmt);
+	_vsnprintf_s(buf, sizeof(buf), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringA(buf);
+}
 
 typedef BOOL(WINAPI *fnAddClipboardFormatListener)(HWND hwnd);
 typedef BOOL(WINAPI *fnRemoveClipboardFormatListener)(HWND hwnd);
@@ -1085,9 +1102,17 @@ static HRESULT STDMETHODCALLTYPE CliprdrDataObject_GetData(IDataObject *This, FO
 		SIZE_T hmem_size;
 		// DWORD remote_format_id = get_remote_format_id(clipboard, instance->m_pFormatEtc[idx].cfFormat);
 		// FIXME: origin code may be failed here???
-		if (cliprdr_send_data_request(instance->m_connID, clipboard, instance->m_pFormatEtc[idx].cfFormat) != 0)
 		{
-			return E_UNEXPECTED;
+			ULONGLONG _trace_t0 = GetTickCount64();
+			int _trace_rc;
+			cliprdr_trace("[cliprdr-trace] GetData(FILEDESCRIPTORW): sending request, waiting for peer...\n");
+			_trace_rc = cliprdr_send_data_request(instance->m_connID, clipboard, instance->m_pFormatEtc[idx].cfFormat);
+			cliprdr_trace("[cliprdr-trace] GetData(FILEDESCRIPTORW): %s after %llu ms\n",
+				_trace_rc == 0 ? "response received" : "FAILED/timed out", GetTickCount64() - _trace_t0);
+			if (_trace_rc != 0)
+			{
+				return E_UNEXPECTED;
+			}
 		}
 		if (!clipboard->hmem)
 		{
@@ -3156,6 +3181,7 @@ wf_cliprdr_server_format_data_request(CliprdrClientContext *context,
 	UINT32 requestedFormatId;
 	CLIPRDR_FORMAT_DATA_RESPONSE response;
 	wfClipboard *clipboard;
+	ULONGLONG _trace_t0 = GetTickCount64();
 
 	if (!context || !formatDataRequest)
 	{
@@ -3186,6 +3212,7 @@ wf_cliprdr_server_format_data_request(CliprdrClientContext *context,
 		STGMEDIUM stg_medium;
 		DROPFILES *dropFiles;
 		FILEGROUPDESCRIPTORW *groupDsc;
+		cliprdr_trace("[cliprdr-trace] ServerFormatDataRequest(FILEDESCRIPTORW): begin\n");
 		result = OleGetClipboard(&dataObj);
 
 		if (FAILED(result))
@@ -3291,6 +3318,8 @@ wf_cliprdr_server_format_data_request(CliprdrClientContext *context,
 
 		GlobalUnlock(stg_medium.hGlobal);
 		ReleaseStgMedium(&stg_medium);
+		cliprdr_trace("[cliprdr-trace] ServerFormatDataRequest(FILEDESCRIPTORW): walk done after %llu ms, %zu file(s)\n",
+			GetTickCount64() - _trace_t0, clipboard->nFiles);
 		if (!fileListValid)
 		{
 			clear_file_array(clipboard);
@@ -3398,10 +3427,16 @@ exit:
 	response.connID = formatDataRequest->connID;
 	response.dataLen = (UINT32)size;
 	response.requestedFormatData = (BYTE *)buff;
+	if (requestedFormatId == RegisterClipboardFormat(CFSTR_FILEDESCRIPTORW))
+		cliprdr_trace("[cliprdr-trace] ServerFormatDataRequest(FILEDESCRIPTORW): sending response, rc=%u, %u bytes, %llu ms since begin\n",
+			rc, (unsigned)size, GetTickCount64() - _trace_t0);
 	if (ERROR_SUCCESS != clipboard->context->ClientFormatDataResponse(clipboard->context, &response))
 	{
 		// CAUTION: if failed to send, server will wait a long time, default 30 seconds.
 	}
+	if (requestedFormatId == RegisterClipboardFormat(CFSTR_FILEDESCRIPTORW))
+		cliprdr_trace("[cliprdr-trace] ServerFormatDataRequest(FILEDESCRIPTORW): response call returned, %llu ms since begin\n",
+			GetTickCount64() - _trace_t0);
 
 	if (buff)
 	{
