@@ -2508,13 +2508,13 @@ impl<T: InvokeUiSession> Remote<T> {
                 } else {
                     self.client_conn_id
                 };
-                // Off-load to a dedicated thread (see cliprdr_proc_sender) instead of
-                // calling ContextSend::proc inline: this io_loop is a current_thread
-                // runtime, so a slow clipboard operation here (e.g. wf_cliprdr.c's
-                // synchronous directory walk for a large folder) would otherwise
-                // stall video-frame decoding and mouse/keyboard forwarding on this
-                // connection until it finished.
-                let _ = cliprdr_proc_sender().send((context_conn_id, clip));
+                // Off-load to its own short-lived thread (see cliprdr_dispatch)
+                // instead of calling ContextSend::proc inline: this io_loop is a
+                // current_thread runtime, so a slow clipboard operation here (e.g.
+                // wf_cliprdr.c's synchronous directory walk for a large folder)
+                // would otherwise stall video-frame decoding and mouse/keyboard
+                // forwarding on this connection until it finished.
+                cliprdr_dispatch(context_conn_id, clip);
             }
             #[cfg(feature = "unix-file-copy-paste")]
             if crate::is_support_file_copy_paste_num(self.handler.lc.read().unwrap().version) {
@@ -2625,29 +2625,69 @@ impl<T: InvokeUiSession> Remote<T> {
     }
 }
 
-// A single dedicated thread that runs ContextSend::proc calls in the order
-// clipboard messages arrived, off whichever connection's io_loop dispatched
-// them. See the call site in handle_cliprdr_msg for why: that loop is a
+// Runs ContextSend::proc for incoming clipboard messages off whichever
+// connection's io_loop dispatched them. See the call site in
+// handle_cliprdr_msg for why it must not run inline: that loop is a
 // current_thread runtime, and this call can block for a while (e.g. a full
 // directory walk in wf_cliprdr.c for a large pasted folder).
+//
+// This used to funnel every message (regardless of type) through one
+// persistent worker thread reading a shared channel in arrival order. That
+// serialized processing across message types that have nothing to do with
+// each other, including the FormatDataResponse/FileContentsResponse
+// messages that unblock wf_cliprdr.c's own synchronous waits
+// (cliprdr_send_data_request / cliprdr_send_request_filecontents block on
+// formatDataRespEvent / req_fevent until the matching response arrives). If
+// such a response ever ended up queued behind another message the worker
+// was still processing, the worker could never reach it -- a timing-
+// dependent, not reliably reproducible self-deadlock of the queue against
+// itself.
+//
+// A prior version of this fix spawned a brand new OS thread per message
+// instead. That removes the head-of-line blocking too, but a folder with a
+// very large number of entries generates one message per file (and more for
+// their content chunks), which would spawn an unbounded number of threads --
+// real resource exhaustion risk (desktop heap / scheduler thrashing), not
+// just a theoretical one. Use a small FIXED-size pool instead: as long as
+// the pool is bigger than the number of clipboard messages that can ever be
+// simultaneously blocked-and-mutually-dependent (wf_cliprdr.c already
+// serializes to one outstanding file-contents request at a time per
+// connection via req_fmutex, so in practice that number is tiny), no message
+// can permanently starve behind another, while the thread count stays
+// bounded no matter how many files are in the folder. wf_cliprdr.c's own
+// fine-grained locks (req_f_state_lock, data_obj_mutex, format_map_lock) and
+// generation/streamId response matching already tolerate messages being
+// processed concurrently/out of arrival order, which is what makes a shared
+// pool (instead of one dedicated thread) safe here.
 #[cfg(target_os = "windows")]
-fn cliprdr_proc_sender() -> &'static std::sync::mpsc::Sender<(i32, clipboard::ClipboardFile)> {
-    use std::sync::OnceLock;
-    static SENDER: OnceLock<std::sync::mpsc::Sender<(i32, clipboard::ClipboardFile)>> =
-        OnceLock::new();
-    SENDER.get_or_init(|| {
-        let (tx, rx) = std::sync::mpsc::channel::<(i32, clipboard::ClipboardFile)>();
-        std::thread::spawn(move || {
-            while let Ok((context_conn_id, clip)) = rx.recv() {
-                let _ = ContextSend::proc(|context| -> ResultType<()> {
-                    context
-                        .server_clip_file(context_conn_id, clip)
-                        .map_err(|e| e.into())
-                });
-            }
-        });
+const CLIPRDR_DISPATCH_WORKERS: usize = 8;
+
+#[cfg(target_os = "windows")]
+fn cliprdr_dispatch(context_conn_id: i32, clip: clipboard::ClipboardFile) {
+    use std::sync::{mpsc, Arc, Mutex, OnceLock};
+    static SENDER: OnceLock<mpsc::Sender<(i32, clipboard::ClipboardFile)>> = OnceLock::new();
+    let sender = SENDER.get_or_init(|| {
+        let (tx, rx) = mpsc::channel::<(i32, clipboard::ClipboardFile)>();
+        let rx = Arc::new(Mutex::new(rx));
+        for _ in 0..CLIPRDR_DISPATCH_WORKERS {
+            let rx = rx.clone();
+            std::thread::spawn(move || loop {
+                let received = { rx.lock().unwrap().recv() };
+                match received {
+                    Ok((context_conn_id, clip)) => {
+                        let _ = ContextSend::proc(|context| -> ResultType<()> {
+                            context
+                                .server_clip_file(context_conn_id, clip)
+                                .map_err(|e| e.into())
+                        });
+                    }
+                    Err(_) => break,
+                }
+            });
+        }
         tx
-    })
+    });
+    let _ = sender.send((context_conn_id, clip));
 }
 
 struct RemoveJob {
