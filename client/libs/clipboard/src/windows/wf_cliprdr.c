@@ -435,6 +435,14 @@ struct wf_clipboard
 	HWND hwnd;
 	HANDLE hmem;
 	SIZE_T hmem_data_len;
+	/* Cached copy of the last successfully-fetched FILEGROUPDESCRIPTORW
+	 * blob, reused for repeated GetData(CFSTR_FILEDESCRIPTORW) calls
+	 * against the same copied content (Explorer, or a shell extension
+	 * polling the clipboard in the background, can call this many times
+	 * before -- or without -- an actual paste). Invalidated only when new
+	 * clipboard content is announced, in wf_cliprdr_server_format_list. */
+	void *cached_fgd;
+	SIZE_T cached_fgd_size;
 	HANDLE thread;
 	HANDLE formatDataRespEvent;
 	BOOL formatDataRespReceived;
@@ -1102,6 +1110,30 @@ static HRESULT STDMETHODCALLTYPE CliprdrDataObject_GetData(IDataObject *This, FO
 		SIZE_T hmem_size;
 		// DWORD remote_format_id = get_remote_format_id(clipboard, instance->m_pFormatEtc[idx].cfFormat);
 		// FIXME: origin code may be failed here???
+		if (clipboard->cached_fgd && clipboard->cached_fgd_size > 0)
+		{
+			/* Same copied content as last time -- answer locally instead of
+			 * re-sending a network request and making the peer re-walk its
+			 * whole directory tree for data we already have. */
+			HANDLE cached_hmem = GlobalAlloc(GMEM_MOVEABLE, clipboard->cached_fgd_size);
+			if (cached_hmem)
+			{
+				void *p = GlobalLock(cached_hmem);
+				if (p)
+				{
+					CopyMemory(p, clipboard->cached_fgd, clipboard->cached_fgd_size);
+					GlobalUnlock(cached_hmem);
+					clipboard->hmem = cached_hmem;
+					clipboard->hmem_data_len = clipboard->cached_fgd_size;
+					cliprdr_trace("[cliprdr-trace] GetData(FILEDESCRIPTORW): served from local cache, no network round trip\n");
+				}
+				else
+				{
+					GlobalFree(cached_hmem);
+				}
+			}
+		}
+		if (!clipboard->hmem)
 		{
 			ULONGLONG _trace_t0 = GetTickCount64();
 			int _trace_rc;
@@ -1165,6 +1197,20 @@ static HRESULT STDMETHODCALLTYPE CliprdrDataObject_GetData(IDataObject *This, FO
 			}
 		}
 
+		/* Stash a copy for the next repeated GetData call, if any (dsc/hmem_size
+		 * are already validated above regardless of whether this came from the
+		 * network or from the cache itself -- re-caching a cache hit is just a
+		 * harmless no-op copy). */
+		{
+			void *fgd_copy = malloc(hmem_size);
+			if (fgd_copy)
+			{
+				CopyMemory(fgd_copy, dsc, hmem_size);
+				free(clipboard->cached_fgd);
+				clipboard->cached_fgd = fgd_copy;
+				clipboard->cached_fgd_size = hmem_size;
+			}
+		}
 		GlobalUnlock(clipboard->hmem);
 		wf_cliprdr_reset_streams(instance);
 		instance->m_pStream = streams;
@@ -2918,6 +2964,11 @@ static UINT wf_cliprdr_server_format_list(CliprdrClientContext *context,
 	if (!clear_format_map(clipboard))
 		goto unlock_fail;
 	clipboard->copied = FALSE;
+	/* New content announced -- the cached file list from whatever was
+	 * copied before is no longer valid. */
+	free(clipboard->cached_fgd);
+	clipboard->cached_fgd = NULL;
+	clipboard->cached_fgd_size = 0;
 
 	if (formatList->numFormats > WF_CLIPRDR_MAX_FORMATS)
 		goto fail;
@@ -4011,6 +4062,9 @@ BOOL wf_cliprdr_uninit(wfClipboard *clipboard, CliprdrClientContext *cliprdr)
 	clipboard->copied = FALSE;
 	InterlockedExchange(&clipboard->fast_conn_id, 0);
 	cliprdr->Custom = NULL;
+	free(clipboard->cached_fgd);
+	clipboard->cached_fgd = NULL;
+	clipboard->cached_fgd_size = 0;
 
 	/* discard all contexts in clipboard */
 	if (try_open_clipboard(clipboard->hwnd))
