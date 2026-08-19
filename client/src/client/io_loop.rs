@@ -2660,7 +2660,7 @@ impl<T: InvokeUiSession> Remote<T> {
 // processed concurrently/out of arrival order, which is what makes a shared
 // pool (instead of one dedicated thread) safe here.
 #[cfg(target_os = "windows")]
-const CLIPRDR_DISPATCH_WORKERS: usize = 8;
+const CLIPRDR_DISPATCH_WORKERS: usize = 16;
 
 #[cfg(target_os = "windows")]
 fn cliprdr_dispatch(context_conn_id: i32, clip: clipboard::ClipboardFile) {
