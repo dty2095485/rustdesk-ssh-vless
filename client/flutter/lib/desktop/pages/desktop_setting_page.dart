@@ -1790,7 +1790,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                             : (value) async {
                                 if (value) {
                                   // SSH and VLESS are mutually exclusive.
-                                  bind.mainSetSsh(
+                                  await bind.mainSetSsh(
                                     server: '',
                                     port: '22',
                                     username: '',
@@ -1812,7 +1812,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                               vlessValues.take(4))
                                           : <String>[]);
                                   if (saved.isNotEmpty) {
-                                    bind.mainSetVless(
+                                    await bind.mainSetVless(
                                       server: saved[0],
                                       port: saved[1],
                                       uuid: saved[2],
@@ -1829,7 +1829,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     _vlessCache =
                                         List<String>.from(vlessValues.take(4));
                                   }
-                                  bind.mainSetVless(
+                                  await bind.mainSetVless(
                                     server: '',
                                     port: '443',
                                     uuid: '',
@@ -1842,6 +1842,12 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                   await bind.mainSetOption(
                                       key: kOptionDisableUdp, value: 'N');
                                 }
+                                // Wait for the writes above to fully land
+                                // before setState() triggers futureBuilder to
+                                // re-fetch mainGetVless()/mainGetSsh() -- an
+                                // un-awaited set here previously raced that
+                                // re-fetch, so the UI could snap back to the
+                                // pre-toggle state and require a second tap.
                                 setState(() {});
                               },
                       ),
@@ -1870,7 +1876,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                             : (value) async {
                                 if (value) {
                                   // SSH and VLESS are mutually exclusive.
-                                  bind.mainSetVless(
+                                  await bind.mainSetVless(
                                     server: '',
                                     port: '443',
                                     uuid: '',
@@ -1889,7 +1895,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                               sshValues.take(5))
                                           : <String>[]);
                                   if (saved.isNotEmpty) {
-                                    bind.mainSetSsh(
+                                    await bind.mainSetSsh(
                                       server: saved[0],
                                       port: saved[1],
                                       username: saved[2],
@@ -1905,7 +1911,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     _sshCache =
                                         List<String>.from(sshValues.take(5));
                                   }
-                                  bind.mainSetSsh(
+                                  await bind.mainSetSsh(
                                     server: '',
                                     port: '22',
                                     username: '',
@@ -1919,6 +1925,12 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                   await bind.mainSetOption(
                                       key: kOptionDisableUdp, value: 'N');
                                 }
+                                // Wait for the writes above to fully land
+                                // before setState() triggers futureBuilder to
+                                // re-fetch mainGetVless()/mainGetSsh() -- an
+                                // un-awaited set here previously raced that
+                                // re-fetch, so the UI could snap back to the
+                                // pre-toggle state and require a second tap.
                                 setState(() {});
                               },
                       ),

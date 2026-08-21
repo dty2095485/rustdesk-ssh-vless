@@ -35,6 +35,13 @@ class OnlineStatusWidget extends StatefulWidget {
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
   final _svcIsUsingPublicServer = true.obs;
+  // Refreshed every second by updateStatus(), same as the rest of this
+  // widget's status fields. The VLESS/SSH toggles live on the Network
+  // settings page and don't notify this page when they change, so without
+  // this the suffix below only ever reflected whatever was set when the app
+  // started (Obx only rebuilds on stateGlobal.svcStatus.value actually
+  // changing, which VLESS/SSH toggles don't touch).
+  final _vlessSshSuffix = ' (直连)'.obs;
   Timer? _updateTimer;
 
   double get em => 14.0;
@@ -162,27 +169,12 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             : stateGlobal.svcStatus.value == SvcStatus.notReady
                 ? translate("not_ready_status")
                 : translate('Ready');
-    return futureBuilder(
-      future: Future.wait([bind.mainGetVless(), bind.mainGetSsh()]),
-      hasData: (data) {
-        final vlessValues = data is List && data.length >= 1 ? data[0] : null;
-        final sshValues = data is List && data.length >= 2 ? data[1] : null;
-        final vlessOn = vlessValues is List &&
-            vlessValues.length >= 5 &&
-            vlessValues[4] == 'Y';
-        final sshOn = sshValues is List &&
-            sshValues.length >= 6 &&
-            sshValues[5] == 'Y';
-        final suffix = stateGlobal.svcStatus.value == SvcStatus.ready
-            ? (sshOn
-                ? ' (SSH)'
-                : (vlessOn ? ' (VLESS)' : ' (直连)'))
-            : '';
-        return Text(
-          '$statusText$suffix',
-          style: TextStyle(fontSize: em),
-        );
-      },
+    final suffix = stateGlobal.svcStatus.value == SvcStatus.ready
+        ? _vlessSshSuffix.value
+        : '';
+    return Text(
+      '$statusText$suffix',
+      style: TextStyle(fontSize: em),
     );
   }
 
@@ -203,6 +195,15 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     try {
       stateGlobal.videoConnCount.value = status['video_conn_count'] as int;
     } catch (_) {}
+    final vlessValues = await bind.mainGetVless();
+    final sshValues = await bind.mainGetSsh();
+    final vlessOn = vlessValues is List &&
+        vlessValues.length >= 5 &&
+        vlessValues[4] == 'Y';
+    final sshOn =
+        sshValues is List && sshValues.length >= 6 && sshValues[5] == 'Y';
+    _vlessSshSuffix.value =
+        sshOn ? ' (SSH)' : (vlessOn ? ' (VLESS)' : ' (直连)');
   }
 }
 
