@@ -1787,7 +1787,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                         value: enabled,
                         onChanged: locked
                             ? null
-                            : (value) {
+                            : (value) async {
                                 if (value) {
                                   // SSH and VLESS are mutually exclusive.
                                   bind.mainSetSsh(
@@ -1797,6 +1797,11 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     publicKey: '',
                                     privateKey: '',
                                   );
+                                  // Both tunnel modes are TCP-only, so a
+                                  // direct UDP connection attempt alongside
+                                  // them is never useful -- keep it disabled.
+                                  await bind.mainSetOption(
+                                      key: kOptionDisableUdp, value: 'Y');
                                   // ON: reuse the last saved values, or ask
                                   // for them when nothing was set before.
                                   final saved = _vlessCache.isNotEmpty
@@ -1830,6 +1835,12 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     uuid: '',
                                     serverName: '',
                                   );
+                                  // SSH is mutually exclusive with VLESS, so
+                                  // turning VLESS off always means neither
+                                  // tunnel mode is active anymore -- direct
+                                  // UDP is usable again.
+                                  await bind.mainSetOption(
+                                      key: kOptionDisableUdp, value: 'N');
                                 }
                                 setState(() {});
                               },
@@ -1856,7 +1867,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                         value: enabled,
                         onChanged: locked
                             ? null
-                            : (value) {
+                            : (value) async {
                                 if (value) {
                                   // SSH and VLESS are mutually exclusive.
                                   bind.mainSetVless(
@@ -1865,6 +1876,11 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     uuid: '',
                                     serverName: '',
                                   );
+                                  // Both tunnel modes are TCP-only, so a
+                                  // direct UDP connection attempt alongside
+                                  // them is never useful -- keep it disabled.
+                                  await bind.mainSetOption(
+                                      key: kOptionDisableUdp, value: 'Y');
                                   final saved = _sshCache.isNotEmpty
                                       ? _sshCache
                                       : (sshValues is List &&
@@ -1896,6 +1912,12 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
                                     publicKey: '',
                                     privateKey: '',
                                   );
+                                  // VLESS is mutually exclusive with SSH, so
+                                  // turning SSH off always means neither
+                                  // tunnel mode is active anymore -- direct
+                                  // UDP is usable again.
+                                  await bind.mainSetOption(
+                                      key: kOptionDisableUdp, value: 'N');
                                 }
                                 setState(() {});
                               },
