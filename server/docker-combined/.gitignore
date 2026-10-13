@@ -1,0 +1,5 @@
+.env
+data/
+certs/
+x-ui-data/
+x-ui-acme/

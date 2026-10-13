@@ -1,0 +1,12 @@
+**
+!Cargo.toml
+!Cargo.lock
+!build.rs
+!src/
+!src/**
+!libs/
+!libs/hbb_common/
+!libs/hbb_common/**
+!docker-combined/
+!docker-combined/rootfs/
+!docker-combined/rootfs/**

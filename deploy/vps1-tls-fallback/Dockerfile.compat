@@ -1,0 +1,4 @@
+FROM rustdesk-server-combined:reality-20260929
+COPY --chmod=0755 xray-rustdesk-compat /app/bin/xray-linux-amd64
+LABEL org.rustdesk.xray.compat="tls-immediate-response-20261002" \
+      org.rustdesk.xray.source="52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120"

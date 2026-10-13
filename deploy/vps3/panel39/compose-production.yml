@@ -1,0 +1,26 @@
+name: rustdesk-vps3
+services:
+  rustdesk-server:
+    image: rustdesk-server-combined:panel-3.9.0-candidate
+    container_name: rustdesk-server
+    network_mode: host
+    environment:
+      RELAY: 203.0.113.30
+      ENCRYPTED_ONLY: "0"
+      RUST_LOG: info
+      VLESS_UUID: ${VLESS_UUID}
+      VLESS_LISTEN: 127.0.0.1:8443
+      SSH_LISTEN: 127.0.0.1:2222
+      XUI_PORT: "2053"
+      XUI_ENABLE_FAIL2BAN: "false"
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - ./data:/data
+      - ./x-ui-data:/etc/x-ui
+      - ./x-ui-acme:/root/.acme.sh
+      - ./internal-tls/fullchain.pem:/run/tls/fullchain.pem:ro
+      - ./internal-tls/privkey.pem:/run/tls/privkey.pem:ro
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true

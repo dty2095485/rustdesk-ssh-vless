@@ -1,0 +1,7 @@
+**
+!docker-combined/
+!docker-combined/bin/
+!docker-combined/bin/linux-amd64/
+!docker-combined/bin/linux-amd64/**
+!docker-combined/rootfs/
+!docker-combined/rootfs/**

@@ -1,0 +1,4 @@
+client-parameters-private.json
+*private*.json
+*private*.txt
+__pycache__/

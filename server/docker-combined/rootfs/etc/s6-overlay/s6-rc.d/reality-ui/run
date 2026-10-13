@@ -1,0 +1,6 @@
+#!/command/with-contenv sh
+set -eu
+
+cd /app
+/app/x-ui setting -listenIP 127.0.0.1 -port "${XUI_PORT:-2053}" >/dev/null
+exec /app/DockerEntrypoint.sh

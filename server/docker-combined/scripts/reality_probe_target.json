@@ -1,0 +1,30 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 4443,
+      "protocol": "http",
+      "settings": {},
+      "streamSettings": {
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/root/cert/fullchain.pem",
+              "keyFile": "/root/cert/privkey.key"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "blackhole",
+      "tag": "blocked"
+    }
+  ]
+}

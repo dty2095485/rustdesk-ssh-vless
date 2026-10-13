@@ -1,0 +1,45 @@
+name: rustdesk-vless-stack
+
+services:
+  rustdesk-server:
+    container_name: ${CONTAINER_NAME:-rustdesk-server-canary}
+    image: ${IMAGE_TAG:-rustdesk-server-combined:canary}
+    build:
+      context: ..
+      dockerfile: ${DOCKERFILE:-docker-combined/Dockerfile.runtime}
+      args:
+        S6_ARCH: ${S6_ARCH:-x86_64}
+        RUSTDESK_BASE_IMAGE: ${RUSTDESK_BASE_IMAGE:-rustdesk/rustdesk-server-s6:1.1.17-vless-combined-r2-ssh}
+        XUI_IMAGE: ${XUI_IMAGE:-ghcr.io/mhsanaei/3x-ui:v3.8.5@sha256:e0f90c10902e0e74f947d5a9efe017b273804477430233bbfc4918542ffe366c}
+    environment:
+      RELAY: ${RELAY:?Set RELAY in .env}
+      ENCRYPTED_ONLY: ${ENCRYPTED_ONLY:-0}
+      RUST_LOG: ${RUST_LOG:-info}
+      VLESS_UUID: ${VLESS_UUID:?Set VLESS_UUID in the untracked .env file}
+      VLESS_TLS_HANDSHAKE_TIMEOUT_SECS: ${VLESS_TLS_HANDSHAKE_TIMEOUT_SECS:-10}
+      VLESS_HEADER_TIMEOUT_SECS: ${VLESS_HEADER_TIMEOUT_SECS:-10}
+      VLESS_UPSTREAM_CONNECT_TIMEOUT_SECS: ${VLESS_UPSTREAM_CONNECT_TIMEOUT_SECS:-5}
+      VLESS_MAX_CONNECTIONS: ${VLESS_MAX_CONNECTIONS:-1024}
+      SSH_AUTHORIZED_KEYS: ${SSH_AUTHORIZED_KEYS:-}
+      VLESS_LISTEN: 127.0.0.1:8443
+      SSH_LISTEN: 0.0.0.0:${SSH_HOST_PORT:-2222}
+      XUI_PORT: "2053"
+      XRAY_VMESS_AEAD_FORCED: "false"
+      XUI_ENABLE_FAIL2BAN: ${XUI_ENABLE_FAIL2BAN:-false}
+      XUI_DB_TYPE: ${XUI_DB_TYPE:-}
+      XUI_DB_DSN: ${XUI_DB_DSN:-}
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./data:/data
+      - ./x-ui-data:/etc/x-ui
+      - ./x-ui-acme:/root/.acme.sh
+      - ${XUI_CERT_DIR:-/root/my-app/ssl}:/root/cert:ro
+      - ${TLS_CERT_FILE:?Set TLS_CERT_FILE in .env}:/run/tls/fullchain.pem:ro
+      - ${TLS_KEY_FILE:?Set TLS_KEY_FILE in .env}:/run/tls/privkey.pem:ro
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true

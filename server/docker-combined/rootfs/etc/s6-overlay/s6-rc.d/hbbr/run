@@ -1,0 +1,11 @@
+#!/command/with-contenv sh
+set -eu
+
+cd /data
+set -- /usr/bin/hbbr
+if [ "${ENCRYPTED_ONLY:-0}" = "1" ]; then
+    set -- "$@" -k _
+fi
+
+exec "$@"
+

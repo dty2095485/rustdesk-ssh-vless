@@ -1,0 +1,28 @@
+#!/command/with-contenv sh
+set -eu
+
+mkdir -p /data
+
+if [ ! -f /data/id_ed25519.pub ] && [ -r /run/secrets/key_pub ]; then
+    cp /run/secrets/key_pub /data/id_ed25519.pub
+fi
+if [ ! -f /data/id_ed25519 ] && [ -r /run/secrets/key_priv ]; then
+    cp /run/secrets/key_priv /data/id_ed25519
+fi
+
+if [ -f /data/id_ed25519.pub ] && [ ! -f /data/id_ed25519 ]; then
+    echo "RustDesk private key is missing" >&2
+    exit 1
+fi
+if [ ! -f /data/id_ed25519.pub ] && [ -f /data/id_ed25519 ]; then
+    echo "RustDesk public key is missing" >&2
+    exit 1
+fi
+
+if [ -f /data/id_ed25519.pub ] && [ -f /data/id_ed25519 ]; then
+    chmod 0600 /data/id_ed25519.pub /data/id_ed25519
+    /usr/bin/rustdesk-utils validatekeypair \
+        "$(cat /data/id_ed25519.pub)" \
+        "$(cat /data/id_ed25519)"
+fi
+

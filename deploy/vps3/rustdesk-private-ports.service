@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep RustDesk backend ports private
+Before=docker.service
+After=network-pre.target
+[Service]
+Type=oneshot
+ExecStart=/opt/rustdesk-server/private-ports.sh
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
