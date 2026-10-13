@@ -25,7 +25,7 @@ JSON 文件。
 | `client/` | Windows / Android 客户端：Rust 核心和 Flutter 界面，支持 SSH、VLESS TCP+TLS、REALITY 及 JSON 导入导出 |
 | `server/` | `hbbs`、`hbbr` 以及 `hbvless` / `hbssh` 网关；`server/docker-combined/` 用于构建包含全部服务的单一镜像 |
 | `installer/` | Windows 单文件安装程序的源码 |
-| `deploy/vps3/` | 仅使用 REALITY 的服务器部署示例 |
+| `deploy/vps/` | 仅使用 REALITY 的服务器部署示例 |
 | `build_installer.ps1`、`build_apk.ps1` | 打包入口；它们调用 `scripts/build/` 中的脚本，该目录未包含在本仓库中 |
 
 ## 编译

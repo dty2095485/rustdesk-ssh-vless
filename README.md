@@ -25,7 +25,7 @@ your own settings or import a network configuration JSON file.
 | `client/` | Windows / Android client: Rust core and Flutter UI, with SSH, VLESS TCP+TLS, REALITY and JSON import/export |
 | `server/` | `hbbs`, `hbbr` and the `hbvless` / `hbssh` gateways; `server/docker-combined/` builds one image with all services |
 | `installer/` | Source of the single-file Windows installer |
-| `deploy/vps3/` | Example deployment of a REALITY-only server |
+| `deploy/vps/` | Example deployment of a REALITY-only server |
 | `build_installer.ps1`, `build_apk.ps1` | Packaging entry points; they call scripts in `scripts/build/`, which is not included in this repository |
 
 ## Building
