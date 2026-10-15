@@ -702,6 +702,10 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
     let mut h_process = launch_server(session_id, true).await.unwrap_or(NULL);
     let mut incoming = ipc::new_listener(crate::POSTFIX_SERVICE).await?;
     let mut stored_usid = None;
+    // A session switch postponed because a port forward (e.g. RDP over RustDesk) was active.
+    // Without retrying it, the server stays in the old, possibly disconnected, session and
+    // finds no displays once the port forward ends.
+    let mut pending_session_switch = false;
     loop {
         let sids: Vec<_> = get_available_sessions(false)
             .iter()
@@ -715,6 +719,10 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
                 let count = ipc::get_port_forward_session_count(1000).await.unwrap_or(0);
                 if count == 0 {
                     h_process = launch_server(session_id, true).await.unwrap_or(NULL);
+                    pending_session_switch = false;
+                } else {
+                    log::info!("session switch to {} postponed, port forwards: {}", session_id, count);
+                    pending_session_switch = true;
                 }
             }
         }
@@ -753,6 +761,7 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
                                         stored_usid = Some(session_id);
                                         h_process =
                                             launch_server(session_id, true).await.unwrap_or(NULL);
+                                        pending_session_switch = false;
                                     }
                                 }
                             }
@@ -773,10 +782,15 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
                     if tmp != session_id && stored_usid != Some(session_id) {
                         log::info!("session changed from {} to {}", session_id, tmp);
                         session_id = tmp;
+                        pending_session_switch = true;
+                    }
+                    if pending_session_switch {
                         let count = ipc::get_port_forward_session_count(1000).await.unwrap_or(0);
                         if count == 0 {
+                            log::info!("restarting server in session {}", session_id);
                             send_close_async("").await.ok();
                             close_sent = true;
+                            pending_session_switch = false;
                         }
                     }
                     let mut exit_code: DWORD = 0;

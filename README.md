@@ -6,7 +6,7 @@ A fork of the RustDesk 1.5.0 client and RustDesk Server 1.1.17 that can reach th
 RustDesk ID/relay server through an SSH tunnel or VLESS (TCP+TLS or REALITY),
 with network settings exported to and imported from a JSON file.
 
-Current release: [1.5.0.10](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.10)
+Current release: [1.5.0.11](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.11)
 
 ## Downloads
 

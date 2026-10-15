@@ -6,7 +6,7 @@
 SSH 隧道或 VLESS（TCP+TLS 或 REALITY）连接 RustDesk ID / 中继服务器，网络设置
 可以导出为 JSON 文件，也可以从 JSON 文件导入。
 
-当前版本：[1.5.0.10](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.10)
+当前版本：[1.5.0.11](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.11)
 
 ## 下载
 
