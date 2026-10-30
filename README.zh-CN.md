@@ -2,11 +2,11 @@
 
 [English](README.md)
 
-基于 RustDesk 1.5.0 客户端和 RustDesk Server 1.1.17 的分支版本。客户端可以通过
+基于 RustDesk 1.5.1 客户端和 RustDesk Server 1.1.17 的分支版本。客户端可以通过
 SSH 隧道或 VLESS（TCP+TLS 或 REALITY）连接 RustDesk ID / 中继服务器，网络设置
 可以导出为 JSON 文件，也可以从 JSON 文件导入。
 
-当前版本：[1.5.0.11](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.11)
+当前版本：[1.5.1.2](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.1.2)
 
 ## 下载
 

@@ -293,11 +293,3 @@ fn send_data_to_all(data: ClipboardFile) {
         allow_err!(msg_channel.sender.send(data.clone()));
     }
 }
-
-#[cfg(test)]
-mod tests {
-    // #[test]
-    // fn test_cliprdr_run() {
-    //     super::cliprdr_run();
-    // }
-}

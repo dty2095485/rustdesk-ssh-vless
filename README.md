@@ -2,11 +2,11 @@
 
 [中文说明](README.zh-CN.md)
 
-A fork of the RustDesk 1.5.0 client and RustDesk Server 1.1.17 that can reach the
+A fork of the RustDesk 1.5.1 client and RustDesk Server 1.1.17 that can reach the
 RustDesk ID/relay server through an SSH tunnel or VLESS (TCP+TLS or REALITY),
 with network settings exported to and imported from a JSON file.
 
-Current release: [1.5.0.11](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.0.11)
+Current release: [1.5.1.2](https://github.com/dty2095485/rustdesk-ssh-vless/releases/tag/v1.5.1.2)
 
 ## Downloads
 
