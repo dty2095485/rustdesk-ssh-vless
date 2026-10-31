@@ -226,6 +226,13 @@
           "build_code": 12072,
           "note": "Android arm64-v8a APK; TLS/REALITY/SSH; no private network defaults"
         },
+        "docker": {
+          "file": "docker\\rustdesk-server-combined-1.5.1.2-x86_64.tar",
+          "sha256": "1f9950b7fcdf8d04770bd6dea320c2a21d81bc765348e4f4f42f0492e08a26f1",
+          "internal_version": "1.1.17",
+          "build_code": 0,
+          "note": "Docker image tar (amd64): hbbs, hbbr, hbvless and hbssh with the daemon-free supervisor; server code unchanged since 1.5.1.1"
+        },
         "windows": {
           "file": "windows\\rustdesk-1.5.1.2-x86_64.exe",
           "sha256": "9db83305b17ba1de05c7a99c2221c777a93bfdd53d060275aa4eb0bfef079c1a",

@@ -41,9 +41,10 @@ RustDesk 1.5.1.
 
 ### Notes
 
-- Windows x64 installer, Android arm64-v8a APK (`versionCode` 12072).
-- No new Docker archive in this release: server code is unchanged since the
-  1.5.1.1 image, which remains current.
+- Windows x64 installer, Android arm64-v8a APK (`versionCode` 12072), Docker
+  amd64 archive.
+- The Docker archive is the 1.5.1.1 image re-tagged for this version: the server
+  binaries are unchanged.
 
 ## [1.5.1.1] - 2026-10-30 [superseded]
 

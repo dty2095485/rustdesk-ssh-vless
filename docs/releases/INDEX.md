@@ -22,6 +22,7 @@
 | 1.5.1.1 | Docker amd64 | `docker\rustdesk-server-combined-1.5.1.1-x86_64.tar` | `7a9243058de2e098…` |
 | 1.5.1.1 | Windows x64 | `windows\rustdesk-1.5.1.1-x86_64.exe` | `2f7b9499cd0cdf27…` |
 | 1.5.1.2 | Android arm64 | `android\rustdesk-1.5.1.2-aarch64.apk` | `f12870cd9455b8bd…` |
+| 1.5.1.2 | Docker amd64 | `docker\rustdesk-server-combined-1.5.1.2-x86_64.tar` | `1f9950b7fcdf8d04…` |
 | 1.5.1.2 | Windows x64 | `windows\rustdesk-1.5.1.2-x86_64.exe` | `9db83305b17ba1de…` |
 
 保留策略：最多 20 个版本，当前 12 个。
