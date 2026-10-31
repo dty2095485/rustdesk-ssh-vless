@@ -1,3 +1,6 @@
 /target
 *.exe
 *.bin
+app_metadata.toml
+data.bin
+Runner.res
