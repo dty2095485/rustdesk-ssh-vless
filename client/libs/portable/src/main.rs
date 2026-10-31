@@ -309,6 +309,10 @@ fn main() -> Result<(), String> {
             args = vec!["--install".to_owned()];
         } else if quick_support {
             args = vec!["--quick_support".to_owned()];
+        } else if args.is_empty() {
+            // Fork: this package is the installer, so a plain double-click must
+            // install the service instead of only running the extracted client.
+            args = vec!["--install".to_owned()];
         }
         execute(exe, args, ui);
     }
