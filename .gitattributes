@@ -1,0 +1,39 @@
+# Keep the repository LF-only. The client tree already ships
+# client/.gitattributes with `* text=auto`; this file pins the checkout form so
+# a Windows clone does not produce CRLF worktrees and CRLF/LF-only diffs.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.tar binary
+*.tar.gz binary
+*.gz binary
+*.tgz binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.o binary
+*.obj binary
+*.pdb binary
+*.apk binary
+*.aar binary
+*.jar binary
+*.keystore binary
+*.jks binary
+*.p12 binary
+*.zst binary
+*.xz binary
