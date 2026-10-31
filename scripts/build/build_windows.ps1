@@ -34,6 +34,7 @@ Write-Host "  worktree         $worktreePath"
 Write-Host "  tag              $tag"
 Write-Host "  build            $BuildName+$BuildNumber"
 
+$python = 'C:\Program Files\Python312\python.exe'
 $vcvars = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat'
 if (!(Test-Path $vcvars)) { Write-Host "PREFLIGHT FAILED: vcvars missing: $vcvars"; exit 1 }
 foreach ($line in (cmd /c "`"$vcvars`" >nul 2>&1 && set")) {
@@ -48,10 +49,23 @@ Log "VCPKG_ROOT=$env:VCPKG_ROOT"
 
 Push-Location $client
 try {
+    # src/ui/inline.rs is generated, never committed: official build.py runs
+    # res/inline-sciter.py first, so a fresh tag worktree has no such file.
+    Log '== generate src/ui/inline.rs =='
+    & $python 'res\inline-sciter.py' 2>&1 | Select-Object -Last 3 | ForEach-Object { Log $_ }
+    Log "inline_exit=$LASTEXITCODE"
+
     Log '== cargo build (bins: inline,vram,hwcodec) =='
     & cargo build --release --features inline,vram,hwcodec --bins *>&1 | Select-Object -Last 6 | ForEach-Object { Log $_ }
     Log "bins_exit=$LASTEXITCODE"
 
+    # flutter_rust_bridge output is gitignored: a fresh tag worktree has no
+    # src/bridge_generated.rs, so the flutter lib build needs codegen first.
+    if (!(Test-Path (Join-Path $client 'src\bridge_generated.rs'))) {
+        Log '== flutter_rust_bridge codegen =='
+        & flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart 2>&1 | Select-Object -Last 4 | ForEach-Object { Log $_ }
+        Log "codegen_exit=$LASTEXITCODE"
+    }
     Log '== cargo build (lib: flutter,inline,vram,hwcodec) =='
     & cargo build --release --lib --features flutter,inline,vram,hwcodec *>&1 | Select-Object -Last 6 | ForEach-Object { Log $_ }
     Log "lib_exit=$LASTEXITCODE"
