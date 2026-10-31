@@ -42,11 +42,16 @@
 3. **打 tag**：`git tag -a v<版本> -m "..."`，推送到 GitHub。
 4. **从 tag 构建**：
    ```
-   git worktree add D:\RD\build\src-<版本> v<版本>
-   powershell -File scripts\build\build-windows.ps1 -Source D:\RD\build\src-<版本> -BuildName 1.5.1 -BuildNumber 2
-   powershell -File scripts\build\build_apk.ps1     -Source D:\RD\build\src-<版本>
+   powershell -File scripts\build\new-worktree.ps1 -Tag v<版本>
+   powershell -File scripts\build\build_windows.ps1   -Worktree D:\RD\build\src-v<版本>
+   powershell -File scripts\build\build_installer.ps1 -Worktree D:\RD\build\src-v<版本> -ReleaseVersion <版本>
+   # Android：先在 WSL 编译原生核心，再在 Windows 打 APK
+   wsl -d Ubuntu -u root -- bash scripts/build/build_android_core.sh /mnt/d/RD/build/src-v<版本>/client
+   powershell -File scripts\build\build_apk.ps1 -Worktree D:\RD\build\src-v<版本> -ReleaseVersion <版本>
    ```
-   脚本必须校验 `git describe --exact-match`，源码不是 tag 就拒绝构建。
+   上述脚本都以 `-Worktree` 指向 tag 工作树，启动时校验 `git describe --exact-match` 与工作区是否干净，
+   不匹配就拒绝构建；`build_windows.ps1` / `build_installer.ps1` / `build_apk.ps1` 都支持 `-VerifyOnly`，
+   只做预检（tag、版本号、工具链、原生库）不出产物。
 5. **归档与校验**：产物进 `D:\RD\releases\<版本>\<平台>/`，文件名 `rustdesk-<版本>-<架构>.<扩展名>`；生成 `manifest.json`、`SHA256SUMS.txt`，并重复校验：载荷文件齐全、私密参数扫描、APK 签名与原生库哈希、Docker 容器健康检查。
 6. **发布与记录**：GitHub Release（附 `SHA256SUMS.txt` 与 release notes）→ 更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md`、`releases/versions-index.json`、`INDEX.md`。
 
