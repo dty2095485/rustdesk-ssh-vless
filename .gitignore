@@ -1,6 +1,6 @@
 # Generated files and native build products
 target/
-build/
+/build/
 .build-output/
 .dart_tool/
 .gradle/
