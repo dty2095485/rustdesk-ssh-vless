@@ -1,0 +1,43 @@
+// Resource template for the single-file Windows installer.
+//
+// build_installer.ps1 copies icon.ico and setup.manifest next to this file,
+// substitutes the @VERSION_*@ placeholders and compiles it with rc.exe. The
+// result is passed to csc as /win32res, so the installer gets the product icon,
+// a readable file version and the requested-execution-level manifest.
+//
+// Resource ids must stay numeric: Windows only reads a VERSIONINFO stored as
+// resource id 1 (a named VS_VERSION_INFO block is ignored by Explorer and
+// GetVersionInfo), and the manifest must be resource id 24 (RT_MANIFEST).
+
+#pragma code_page(65001)
+
+1 VERSIONINFO
+ FILEVERSION @VERSION_COMMA@
+ PRODUCTVERSION @VERSION_COMMA@
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "RustDesk VLESS / SSH fork\0"
+            VALUE "FileDescription", "RustDesk VLESS / SSH installer\0"
+            VALUE "FileVersion", "@VERSION_DOT@\0"
+            VALUE "InternalName", "rustdesk-setup\0"
+            VALUE "OriginalFilename", "rustdesk-@VERSION_DOT@-x86_64.exe\0"
+            VALUE "ProductName", "RustDesk VLESS / SSH\0"
+            VALUE "ProductVersion", "@VERSION_DOT@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+1 ICON "icon.ico"
+1 24 "setup.manifest"

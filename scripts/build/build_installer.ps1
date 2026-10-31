@@ -54,9 +54,18 @@ $displayDll = Join-Path $client 'target\release\dylib_virtual_display.dll'
 $payloadReady = (Test-Path -LiteralPath (Join-Path $flutterRelease 'rustdesk.exe')) -and (Test-Path -LiteralPath $coreDll) -and (Test-Path -LiteralPath $displayDll)
 Info "payload built    $(if ($payloadReady) { 'yes' } else { 'no (run scripts\build\build-windows.ps1 first)' })"
 
+$rc = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\rc.exe' -ErrorAction SilentlyContinue |
+    Sort-Object FullName -Descending | Select-Object -First 1
+if (!$rc) { Fail 'rc.exe not found (Windows SDK resource compiler)' }
+$icon = @(
+    (Join-Path $client 'res\icon.ico'),
+    (Join-Path $client 'flutter\windows\runner\resources\app_icon.ico')
+) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (!$icon) { Fail 'no icon.ico found in the worktree (client\res\icon.ico)' }
 if (!(Test-Path -LiteralPath $csc)) { Fail "csc.exe not found: $csc" }
 if (!(Test-Path -LiteralPath $python)) { Fail "python not found: $python" }
-Info "toolchain        csc + python present"
+Info "toolchain        csc + rc + python present"
+Info "icon             $icon"
 
 if ($VerifyOnly) {
     Write-Host 'PREFLIGHT OK'
@@ -108,11 +117,32 @@ if (Test-Path -LiteralPath $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
 
 Write-Host '== package installer =='
+# Icon, file version and manifest are compiled into one .res, so Explorer shows
+# the product icon and Properties shows the release version. Resource ids must
+# stay numeric (1 = VERSIONINFO, 1 = ICON, 24 = RT_MANIFEST).
+$resDir = Join-Path $build 'installer-res'
+New-Item -ItemType Directory -Force -Path $resDir | Out-Null
+Copy-Item -LiteralPath $icon -Destination (Join-Path $resDir 'icon.ico') -Force
+Copy-Item -LiteralPath (Join-Path $installerAssets 'setup.manifest') -Destination (Join-Path $resDir 'setup.manifest') -Force
+$versionParts = $ReleaseVersion -split '\.'
+$rcText = [System.IO.File]::ReadAllText((Join-Path $installerAssets 'installer.rc'))
+$rcText = $rcText.Replace('@VERSION_COMMA@', ($versionParts -join ',')).Replace('@VERSION_DOT@', $ReleaseVersion)
+[System.IO.File]::WriteAllText((Join-Path $resDir 'installer.rc'), $rcText)
+Push-Location $resDir
+try {
+    & $rc.FullName /nologo /fo installer.res installer.rc
+    if ($LASTEXITCODE -ne 0) { Fail "rc.exe failed: $LASTEXITCODE" }
+} finally { Pop-Location }
+$res = Join-Path $resDir 'installer.res'
+
 if (Test-Path -LiteralPath $out) { Remove-Item $out -Force }
 & $csc /nologo /target:winexe /optimize+ /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:System.Windows.Forms.dll `
-    "/win32manifest:$(Join-Path $installerAssets 'setup.manifest')" "/resource:$zip,payload.zip" "/out:$out" `
+    "/win32res:$res" "/resource:$zip,payload.zip" "/out:$out" `
     (Join-Path $installerAssets 'bootstrap.cs')
 if ($LASTEXITCODE -ne 0) { Fail "csc failed: $LASTEXITCODE" }
+
+& $python (Join-Path $scriptsDir 'check_installer_resources.py') $out
+if ($LASTEXITCODE -ne 0) { Fail 'installer is missing its icon, version or manifest resource' }
 
 if (!$KeepExistingNetworkProfiles) {
     & $python (Join-Path $scriptsDir 'export_network_profiles.py') --output-dir $archiveDir --basename ([IO.Path]::GetFileNameWithoutExtension($out))
