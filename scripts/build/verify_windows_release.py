@@ -22,8 +22,11 @@ def collect(data):
     elif isinstance(data, list):
         for value in data:
             collect(value)
-for name in ['VPS1-network.json', 'VPS3-network.json']:
-    collect(json.loads((Path(os.environ.get('RD_PROFILES_DIR', 'D:/RD/releases/windows/ssh')) / name).read_text(encoding='utf-8-sig')))
+profiles = sorted(Path(os.environ.get('RD_PROFILES_DIR', 'D:/RD/releases/windows/ssh')).glob('*network.json'))
+if not profiles:
+    raise SystemExit('no *network.json profile found to check the payload against')
+for profile in profiles:
+    collect(json.loads(profile.read_text(encoding='utf-8-sig')))
 count = 0
 for file in payload.rglob('*'):
     if not file.is_file():

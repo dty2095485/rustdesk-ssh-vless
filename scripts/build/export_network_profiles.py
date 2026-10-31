@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--output-dir', required=True)
 parser.add_argument('--basename', required=True)
 parser.add_argument('--config', default=str(Path(os.environ['APPDATA'])/'RustDesk/config/RustDesk2.toml'))
-parser.add_argument('--vps3', default=os.environ.get('RD_VPS3_PROFILE', r'D:\RD\.ssh\vps3-client-settings.json'))
+parser.add_argument('--vps3', default='')
 args = parser.parse_args()
 output = Path(args.output_dir)
 output.mkdir(parents=True, exist_ok=True)
@@ -39,7 +39,7 @@ if source.exists():
     if current['ssh'].get('server'):
         current['ssh'].setdefault('port',2222)
     write_profile('current-network',current)
-if Path(args.vps3).exists():
+if args.vps3 and Path(args.vps3).exists():
     p=json.loads(Path(args.vps3).read_text())
     active={'server':p['address'],'port':'443','uuid':p['uuid'],'server_name':p['sni']}
     vps3_server={'host':p['address'],'relay':p['address'],'api':'','key':p['rustdesk_key']}
@@ -52,6 +52,7 @@ if Path(args.vps3).exists():
         combined['network'].update({'disable-udp':'Y','force-always-relay':'Y','allow-websocket':'N'})
         if not combined['ssh'].get('server') or not combined['ssh'].get('private_key'):
             identity=Path(os.environ.get('RD_SSHKEY_DIR', r'D:\RD\work\rustdesk-ssh\.sshkeys'))/'id_ed25519'
-            if identity.is_file() and identity.with_suffix('.pub').is_file():\n                combined['ssh']={'server':combined['server']['host'],'port':'2222','username':'rustdesk','public_key':identity.with_suffix('.pub').read_text().strip(),'private_key':identity.read_text(),'enabled':'N'}
+            if identity.is_file() and identity.with_suffix('.pub').is_file():
+                combined['ssh']={'server':combined['server']['host'],'port':'2222','username':'rustdesk','public_key':identity.with_suffix('.pub').read_text().strip(),'private_key':identity.read_text(),'enabled':'N'}
         combined['ssh']['enabled']='N'
         write_profile('vps1-vps3-network',combined)

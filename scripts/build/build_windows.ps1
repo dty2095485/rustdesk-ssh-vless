@@ -61,7 +61,11 @@ try {
 
     # flutter_rust_bridge output is gitignored: a fresh tag worktree has no
     # src/bridge_generated.rs, so the flutter lib build needs codegen first.
-    if (!(Test-Path (Join-Path $client 'src\bridge_generated.rs'))) {
+    if (!(Test-Path (Join-Path $client 'src\bridge_generated.rs')) -or !(Test-Path (Join-Path $client 'src\bridge_generated.io.rs')) -or !(Test-Path (Join-Path $client 'flutter\lib\generated_bridge.dart'))) {
+        # ffigen runs through lutter pub run, which needs the package config.
+        Push-Location (Join-Path $client 'flutter')
+        try { & flutter pub get 2>&1 | Select-Object -Last 2 | ForEach-Object { Log $_ } } finally { Pop-Location }
+        Log "pubget_exit=$LASTEXITCODE"
         Log '== flutter_rust_bridge codegen =='
         & flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart 2>&1 | Select-Object -Last 4 | ForEach-Object { Log $_ }
         Log "codegen_exit=$LASTEXITCODE"
