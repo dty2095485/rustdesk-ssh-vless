@@ -3,22 +3,6 @@
   "versions": [
     {
       "managed_by": "rustdesk-version-manager",
-      "version": "1.5.0.5",
-      "official_version": "1.5.0",
-      "custom_revision": 5,
-      "created_at": "2026-10-10T11:27:11.241984+00:00",
-      "artifacts": {
-        "windows": {
-          "file": "windows\\rustdesk-1.5.0.5-x86_64.exe",
-          "sha256": "412a4ef926a4649e66a156b29426c2cf12a10ee9a0430d82d68613b95d2f2cde",
-          "internal_version": "1.5.0.5",
-          "build_code": 0,
-          "note": "Windows x64 Flutter; TLS/REALITY/SSH; private network configuration supplied separately"
-        }
-      }
-    },
-    {
-      "managed_by": "rustdesk-version-manager",
       "version": "1.5.0.6",
       "official_version": "1.5.0",
       "custom_revision": 6,
@@ -198,6 +182,22 @@
           "file": "windows\\rustdesk-1.5.1.3-x86_64.exe",
           "sha256": "58594d3ca6b4b00745a58dd95ea296ea0fc270a50e30cc8495126d7d4b723de1",
           "internal_version": "1.5.1.3",
+          "build_code": 0,
+          "note": "Windows x64 self-extracting installer (upstream libs/portable packer); TLS/REALITY/SSH; no private network defaults"
+        }
+      }
+    },
+    {
+      "managed_by": "rustdesk-version-manager",
+      "version": "1.5.1.4",
+      "official_version": "1.5.1",
+      "custom_revision": 4,
+      "created_at": "2026-10-31T04:51:42.200982+00:00",
+      "artifacts": {
+        "windows": {
+          "file": "windows\\rustdesk-1.5.1.4-x86_64.exe",
+          "sha256": "9592d97acb42d1713751c9b9e11ce0a508338a332788c333bfcf64aad6b051c8",
+          "internal_version": "1.5.1.4",
           "build_code": 0,
           "note": "Windows x64 self-extracting installer (upstream libs/portable packer); TLS/REALITY/SSH; no private network defaults"
         }

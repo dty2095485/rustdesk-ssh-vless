@@ -5,7 +5,6 @@
 
 | 版本 | 平台 | 文件 | SHA256 |
 |---|---|---|---|
-| 1.5.0.5 | Windows x64 | `windows\rustdesk-1.5.0.5-x86_64.exe` | `412a4ef926a4649e…` |
 | 1.5.0.6 | Windows x64 | `windows\rustdesk-1.5.0.6-x86_64.exe` | `a561849171e0d67f…` |
 | 1.5.0.7 | Windows x64 | `windows\rustdesk-1.5.0.7-x86_64.exe` | `c3f976581b91616d…` |
 | 1.5.0.8 | Windows x64 | `windows\rustdesk-1.5.0.8-x86_64.exe` | `990186ab09283bb2…` |
@@ -21,6 +20,7 @@
 | 1.5.1.2 | Docker amd64 | `docker\rustdesk-server-combined-1.5.1.2-x86_64.tar` | `1f9950b7fcdf8d04…` |
 | 1.5.1.2 | Windows x64 | `windows\rustdesk-1.5.1.2-x86_64.exe` | `9db83305b17ba1de…` |
 | 1.5.1.3 | Windows x64 | `windows\rustdesk-1.5.1.3-x86_64.exe` | `58594d3ca6b4b007…` |
+| 1.5.1.4 | Windows x64 | `windows\rustdesk-1.5.1.4-x86_64.exe` | `9592d97acb42d171…` |
 
 保留策略：最多 10 个版本，当前 10 个。
 

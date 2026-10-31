@@ -11,7 +11,24 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [Unreleased]
 
-## [1.5.1.3] - 2026-10-30
+## [1.5.1.4] - 2026-10-30
+
+Windows-only release that completes the upstream packaging switch from 1.5.1.3.
+
+### Fixed
+
+- The published repository was missing 118 binary assets that `client/.gitignore`
+  excludes (53 SVGs under `flutter/assets` plus icons and screenshots); the
+  1.5.1.3 bundle shipped 21 of 75 assets. All of them are imported now and the
+  payload matches 1.5.1.2 file for file (94 files, 75 bundle assets).
+
+### Notes
+
+- `1.5.1.3` is withdrawn: its Windows payload was incomplete. The GitHub
+  release was removed, the tag and the local archive stay as a record.
+- Installer still built with the upstream `libs/portable` packer, icon and
+  manifest resources included; Android and Docker unchanged from 1.5.1.2.
+## [1.5.1.3] - 2026-10-30 [withdrawn]
 
 Windows-only build: the installer is now packaged exactly like upstream.
 
