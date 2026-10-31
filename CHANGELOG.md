@@ -11,6 +11,28 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [Unreleased]
 
+## [1.5.1.3] - 2026-10-30
+
+Windows-only build: the installer is now packaged exactly like upstream.
+
+### Changed
+
+- libs/portable self-extracting packer replaces the hand-written csc
+  bootstrap, so the released EXE carries the RustDesk icon, a version resource
+  and the manifest (previously the file showed a blank icon and no version).
+- Fork patch: a plain double-click passes `--install` to the payload, keeping
+  the previous install-the-service behaviour instead of only running the client.
+- Build pipeline fixes required for a clean tag worktree: generate
+  `src/ui/inline.rs`, run `flutter pub get` before the bridge codegen, use the
+  upstream codegen invocation, keep C debug info (`-Z7`) opt-in because MSVC
+  14.44 fails with D8050 on long build paths, and take the packer binary from the
+  workspace target directory.
+
+### Notes
+
+- Windows x64 installer only; Android and Docker are unchanged from 1.5.1.2.
+- The installer reports the upstream version (1.5.1) in its version resource, as
+  the upstream assets do; the fork revision is in the file name and manifest.
 ## [1.5.1.2] - 2026-10-30
 
 Rebuilt on top of the published 1.5.0.11 source, then merged with upstream

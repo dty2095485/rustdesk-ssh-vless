@@ -110,8 +110,13 @@ try {
     } finally {
         Pop-Location
     }
-    $packer = Join-Path $portableDir 'target\release\rustdesk-portable-packer.exe'
-    if (!(Test-Path -LiteralPath $packer)) { Fail "packer not produced: $packer" }
+    # cargo writes to the workspace target dir when the crate is a workspace
+    # member, and to its own target dir when built standalone; accept both.
+    $packer = @(
+        (Join-Path $portableDir 'target\release\rustdesk-portable-packer.exe'),
+        (Join-Path $client 'target\release\rustdesk-portable-packer.exe')
+    ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (!$packer) { Fail 'packer not produced (checked crate and workspace target dirs)' }
     if (Test-Path -LiteralPath $out) { Remove-Item $out -Force }
     Copy-Item -LiteralPath $packer -Destination $out -Force
 } finally {
@@ -124,7 +129,10 @@ Write-Host '== verify installer =='
 if ($LASTEXITCODE -ne 0) { Fail 'installer is missing its icon, version or manifest resource' }
 $installerVersion = (Get-Item -LiteralPath $out).VersionInfo
 $installerNumeric = "$($installerVersion.FileMajorPart).$($installerVersion.FileMinorPart).$($installerVersion.FileBuildPart).$($installerVersion.FilePrivatePart)"
-if ($installerNumeric -ne $ReleaseVersion) { Fail "installer file version $installerNumeric != $ReleaseVersion" }
+# The packer's version resource comes from winres/the crate version, so it
+# reports the upstream version (1.5.1); the fork revision lives in the file
+# name, manifest and SHA256SUMS, exactly like the upstream assets.
+if ((($installerNumeric -split '\.')[0..2] -join '.') -ne $officialVersion) { Fail "installer file version $installerNumeric != upstream $officialVersion" }
 Info "installer        $installerNumeric, $(('{0:N0}' -f (Get-Item $out).Length)) B"
 
 if (!$KeepExistingNetworkProfiles) {
