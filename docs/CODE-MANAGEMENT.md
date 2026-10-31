@@ -52,7 +52,7 @@
    上述脚本都以 `-Worktree` 指向 tag 工作树，启动时校验 `git describe --exact-match` 与工作区是否干净，
    不匹配就拒绝构建；`build_windows.ps1` / `build_installer.ps1` / `build_apk.ps1` 都支持 `-VerifyOnly`，
    只做预检（tag、版本号、工具链、原生库）不出产物。
-5. **归档与校验**：产物进 `D:\RD\releases\<版本>\<平台>/`，文件名 `rustdesk-<版本>-<架构>.<扩展名>`；生成 `manifest.json`、`SHA256SUMS.txt`，并重复校验：载荷文件齐全、私密参数扫描、APK 签名与原生库哈希、Docker 容器健康检查。
+5. **归档与校验**：产物进 `D:\RD\releases\<版本>\<平台>/`，文件名 `rustdesk-<版本>-<架构>.<扩展名>`；生成 `manifest.json`、`SHA256SUMS.txt`，并重复校验：**载荷文件清单必须与 `scripts/build/payload-manifest.txt` 完全一致**（`check_payload_manifest.py`，多一个少一个都失败；清单只有在确认新载荷无误后才能用 `--write` 刷新）、私密参数扫描、APK 签名与原生库哈希、Docker 容器健康检查。
 6. **发布与记录**：GitHub Release（附 `SHA256SUMS.txt` 与 release notes）→ 更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md` → 运行 `scripts/build/mirror_release_index.ps1` 把 `versions-index.json` 与 `INDEX.md` 镜像进 `docs/releases/` 并提交。
 
 ## 4.1 克隆与行尾约定

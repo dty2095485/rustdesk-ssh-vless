@@ -91,6 +91,11 @@ Copy-Item -LiteralPath $displayDll -Destination (Join-Path $payload 'dylib_virtu
 if (!$?) { Fail 'prepare_xray.ps1 failed' }
 & $python (Join-Path $scriptsDir 'verify_windows_release.py') $payload $ReleaseVersion
 if ($LASTEXITCODE -ne 0) { Fail 'Windows payload version/privacy verification failed' }
+# File-list guard: 1.5.1.3 shipped 21 of 75 bundle assets because the repository
+# lacked 118 binary files. Compare against the canonical list and fail on any
+# missing or extra file.
+& $python (Join-Path $scriptsDir 'check_payload_manifest.py') --payload $payload
+if ($LASTEXITCODE -ne 0) { Fail 'payload does not match scripts/build/payload-manifest.txt (refresh it only after verifying the new file list)' }
 
 # Upstream strips the dpiAware element before embedding the manifest into the
 # packer; keep that and restore the file afterwards so the worktree stays clean.
