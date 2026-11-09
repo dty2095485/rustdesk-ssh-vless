@@ -21,6 +21,7 @@
 | 1.5.1.2 | Windows x64 | `windows\rustdesk-1.5.1.2-x86_64.exe` | `9db83305b17ba1de…` |
 | 1.5.1.3 | Windows x64 | `windows\rustdesk-1.5.1.3-x86_64.exe` | `58594d3ca6b4b007…` |
 | 1.5.1.4 | Windows x64 | `windows\rustdesk-1.5.1.4-x86_64.exe` | `9592d97acb42d171…` |
+| 1.5.1.5 | Windows x64 | `windows\rustdesk-1.5.1.5-x86_64.exe` | `421482a7931bc266…` |
 
 保留策略：最多 10 个版本，当前 10 个。
 

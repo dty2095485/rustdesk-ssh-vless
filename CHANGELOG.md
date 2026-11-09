@@ -11,6 +11,31 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [Unreleased]
 
+## [1.5.1.5] - 2026-11-09
+
+Windows-only release. The server change ships in the container image, not in
+this installer.
+
+### Added
+
+- The status line now reports the server-side view of this device
+  (`服务端已确认` / `服务端未确认` next to `Ready (VLESS)`), refreshed every 10 s
+  with the same `OnlineRequest` the address book uses. A local "Ready" could
+  previously hide the case where hbbs had no fresh registration and every other
+  client showed the device offline.
+- hbbs accepts the change-id request the client sends (a `RegisterPk` with an
+  empty `pk` and an `old_id`). Official hbbs answers `NOT_SUPPORT`, which the
+  client surfaced as "server does not support", so changing an id to a custom
+  one was impossible on a self-hosted server.
+
+### Notes
+
+- Renaming requires the old id's machine uuid, keeps `created_at`/`pk`, and is
+  idempotent on retry; normal registration paths are unchanged.
+- Known limits: `uuid` is the only credential for a rename, the path has no
+  separate rate limit, and the previous id is not kept, so peers that still
+  list it keep showing it offline.
+
 ## [1.5.1.4] - 2026-10-30
 
 Windows-only release that completes the upstream packaging switch from 1.5.1.3.
