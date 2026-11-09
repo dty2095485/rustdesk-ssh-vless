@@ -681,6 +681,18 @@ impl RendezvousServer {
                     return true;
                 }
                 Some(rendezvous_message::Union::RegisterPk(rk)) => {
+                    // A change-ID request carries no pk and names the previous
+                    // id. Stock hbbs only supports this on licensed servers.
+                    if rk.pk.is_empty() && !rk.old_id.is_empty() {
+                        let res = self.handle_change_id(rk).await;
+                        let mut msg_out = RendezvousMessage::new();
+                        msg_out.set_register_pk_response(RegisterPkResponse {
+                            result: res.into(),
+                            ..Default::default()
+                        });
+                        Self::send_to_sink(sink, msg_out).await;
+                        return vless_authenticated;
+                    }
                     if vless_authenticated {
                         // TCP-only tunnels (e.g. VLESS) register through this
                         // connection.
@@ -787,6 +799,67 @@ impl RendezvousServer {
         } else {
             register_pk_response::Result::OK
         }
+    }
+
+    // Move a peer record to a custom id. The caller proves ownership of the
+    // old id with the same machine uuid, which is what the client sends when
+    // the user changes the id from the UI.
+    async fn handle_change_id(&mut self, rk: RegisterPk) -> register_pk_response::Result {
+        let new_id = rk.id;
+        let old_id = rk.old_id;
+        if new_id == old_id {
+            return register_pk_response::Result::OK;
+        }
+        if new_id.len() < 6 || !hbb_common::is_valid_custom_id(&new_id) {
+            return register_pk_response::Result::INVALID_ID_FORMAT;
+        }
+        let old_peer = match self.pm.get(&old_id).await {
+            Some(peer) => peer,
+            None => {
+                // The rename may already have landed and only the response was
+                // lost, so treat a machine that already holds the new id as
+                // success instead of failing the retry.
+                if let Some(existing) = self.pm.get(&new_id).await {
+                    let same_machine = {
+                        let existing = existing.read().await;
+                        existing.uuid == rk.uuid && !existing.pk.is_empty()
+                    };
+                    if same_machine {
+                        return register_pk_response::Result::OK;
+                    }
+                }
+                return register_pk_response::Result::UUID_MISMATCH;
+            }
+        };
+        let (guid, uuid, pk, info) = {
+            let peer = old_peer.read().await;
+            if peer.uuid.is_empty() || peer.uuid != rk.uuid || peer.pk.is_empty() {
+                return register_pk_response::Result::UUID_MISMATCH;
+            }
+            match serde_json::to_string(&peer.info) {
+                Ok(info) => (peer.guid.clone(), peer.uuid.clone(), peer.pk.clone(), info),
+                Err(err) => {
+                    log::error!("change id {} -> {}: {}", old_id, new_id, err);
+                    return register_pk_response::Result::SERVER_ERROR;
+                }
+            }
+        };
+        if let Some(existing) = self.pm.get(&new_id).await {
+            let (uuid_new, pk_new) = {
+                let existing = existing.read().await;
+                (existing.uuid.clone(), existing.pk.clone())
+            };
+            if uuid_new != uuid || pk_new != pk {
+                return register_pk_response::Result::ID_EXISTS;
+            }
+        }
+        if let Err(err) = self.pm.db.update_pk(&guid, &new_id, &pk, &info).await {
+            log::error!("change id {} -> {}: {}", old_id, new_id, err);
+            return register_pk_response::Result::SERVER_ERROR;
+        }
+        self.pm.rename(&old_id, &new_id, old_peer).await;
+        log::info!("peer id changed: {} -> {}", old_id, new_id);
+        register_pk_response::Result::OK
     }
 
     #[inline]

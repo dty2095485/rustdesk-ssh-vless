@@ -132,6 +132,15 @@ impl PeerMap {
         register_pk_response::Result::OK
     }
 
+    // Move a peer to another id, keeping the same in-memory record so the
+    // online state follows the new id immediately.
+    #[inline]
+    pub(crate) async fn rename(&self, old_id: &str, new_id: &str, peer: LockPeer) {
+        let mut map = self.map.write().await;
+        map.remove(old_id);
+        map.insert(new_id.to_owned(), peer);
+    }
+
     #[inline]
     pub(crate) async fn get(&self, id: &str) -> Option<LockPeer> {
         let p = self.map.read().await.get(id).cloned();
