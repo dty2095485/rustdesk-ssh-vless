@@ -43,6 +43,15 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   // changing, which VLESS/SSH toggles don't touch).
   final _vlessSshSuffix = ' (直连)'.obs;
   Timer? _updateTimer;
+  // Server-side view of this device, refreshed by asking hbbs the same
+  // OnlineRequest the address book already uses: the server reports a peer
+  // online only if it saw a registration within its 30s window, so this is the
+  // only local indicator that matches what other clients see.
+  static const _cbQueryOnlines = 'callback_query_onlines';
+  static const _selfOnlineListener = 'conn_status_self_online';
+  final _serverSeen = (-1).obs; // -1 unknown, 0 not seen, 1 seen
+  Timer? _selfOnlineTimer;
+  String _myId = '';
 
   double get em => 14.0;
   double? get height => bind.isIncomingOnly() ? null : em * 3;
@@ -62,11 +71,41 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     _updateTimer = periodic_immediate(Duration(seconds: 1), () async {
       updateStatus();
     });
+    platformFFI.registerEventHandler(_cbQueryOnlines, _selfOnlineListener,
+        (evt) async {
+      final me = _myId;
+      if (me.isEmpty) return;
+      final onlines = '${evt['onlines'] ?? ''}';
+      final offlines = '${evt['offlines'] ?? ''}';
+      if (onlines.split(',').contains(me)) {
+        _serverSeen.value = 1;
+      } else if (offlines.split(',').contains(me)) {
+        _serverSeen.value = 0;
+      }
+    });
+    // 10s: three samples per server-side 30s online window.
+    _selfOnlineTimer = periodic_immediate(Duration(seconds: 10), () async {
+      if (_myId.isEmpty) {
+        try {
+          _myId = await bind.mainGetMyId();
+        } catch (_) {
+          return;
+        }
+      }
+      if (_myId.isEmpty) return;
+      try {
+        await bind.queryOnlines(ids: [_myId]);
+      } catch (e) {
+        debugPrint('query self online state failed: $e');
+      }
+    });
   }
 
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _selfOnlineTimer?.cancel();
+    platformFFI.unregisterEventHandler(_cbQueryOnlines, _selfOnlineListener);
     super.dispose();
   }
 
@@ -169,12 +208,22 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             : stateGlobal.svcStatus.value == SvcStatus.notReady
                 ? translate("not_ready_status")
                 : translate('Ready');
-    final suffix = stateGlobal.svcStatus.value == SvcStatus.ready
-        ? _vlessSshSuffix.value
-        : '';
+    final ready = stateGlobal.svcStatus.value == SvcStatus.ready;
+    final suffix = ready ? _vlessSshSuffix.value : '';
+    // -1 until the first answer arrives, so a slow query never flashes a
+    // false "not seen".
+    final seen = ready ? _serverSeen.value : -1;
+    final serverSuffix = seen == 1
+        ? ' · 服务端已确认'
+        : seen == 0
+            ? ' · 服务端未确认'
+            : '';
     return Text(
-      '$statusText$suffix',
-      style: TextStyle(fontSize: em),
+      '$statusText$suffix$serverSuffix',
+      style: TextStyle(
+        fontSize: em,
+        color: seen == 0 ? Color.fromARGB(255, 224, 79, 95) : null,
+      ),
     );
   }
 
