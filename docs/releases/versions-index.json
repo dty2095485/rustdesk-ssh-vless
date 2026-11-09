@@ -200,6 +200,13 @@
           "internal_version": "1.5.1.5",
           "build_code": 0,
           "note": "Windows x64 self-extracting installer (upstream libs/portable packer); TLS/REALITY/SSH; no private network defaults"
+        },
+        "docker": {
+          "file": "docker\\rustdesk-server-combined-1.5.1.5-x86_64.tar.gz",
+          "sha256": "6293746520eec3c8cff316c54d8486eaf2a1697531722333cb4c2002ec198d4a",
+          "internal_version": "1.5.1.5",
+          "build_code": 0,
+          "note": "Docker amd64 image archive (gzip, OCI layout); RustDesk 1.1.17 with the custom id patch and the 3x-ui panel, same image lineage as the VPS1 deployment"
         }
       }
     }

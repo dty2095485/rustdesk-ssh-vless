@@ -13,8 +13,7 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [1.5.1.5] - 2026-11-09
 
-Windows-only release. The server change ships in the container image, not in
-this installer.
+Windows installer plus the combined server image archive.
 
 ### Added
 
