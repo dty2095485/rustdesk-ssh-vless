@@ -18,8 +18,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "tag not found in $RepoRoot : $Tag" }
     if (Test-Path -LiteralPath $Path) { throw "worktree path already exists: $Path" }
     New-Item -ItemType Directory -Force -Path (Split-Path $Path) | Out-Null
+    # git prints "Preparing worktree" on stderr; under 'Stop' Windows PowerShell
+    # turns that into a terminating error, so judge success by the exit code only.
+    $ErrorActionPreference = 'Continue'
     & git worktree add --detach $Path $Tag 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "git worktree add failed (exit $LASTEXITCODE)" }
+    $addExit = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    if ($addExit -ne 0) { throw "git worktree add failed (exit $addExit)" }
     $exact = (& git -C $Path describe --tags --exact-match 2>$null)
     if ($exact -ne $Tag) { throw "worktree is at '$exact', expected '$Tag'" }
     $dirty = (& git -C $Path status --porcelain 2>$null)
