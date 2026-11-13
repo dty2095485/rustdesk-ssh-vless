@@ -1,0 +1,62 @@
+# Patch survival checklist, checked by check_patches.py after every upstream sync.
+#
+# One line per marker:  <feature> | <path in the client tree> | <fixed string>
+#   - paths are relative to client/ ; libs/hbb_common/... is the fork's hbb_common
+#   - the string is matched literally (no regex), whitespace included
+#   - a feature passes only if every one of its markers is found
+#   - feature names starting with "upstream:" guard upstream code the fork relies on
+#     (things a careless "ours" resolution dropped before, see 1.5.1.1)
+#
+# When you add a patch to the series, add at least one marker for it here.
+
+transport        | src/ipc.rs                                   | pub async fn set_vless(value: VlessServer)
+transport        | src/ipc.rs                                   | pub async fn set_ssh(value: SshServer)
+transport        | src/flutter_ffi.rs                           | pub fn main_set_vless(
+transport        | src/ui.rs                                    | fn get_vless(&self) -> Value
+transport        | src/ui/index.tis                             | function open_vless_dialog()
+transport        | src/rendezvous_mediator.rs                   | Only run the key exchange when the server actually has a key
+transport        | src/common.rs                                | Plan A: the NAT test runs on the official UDP path
+transport        | src/ui_interface.rs                          | pub fn set_vless(server: String, port: String, uuid: String, server_name: String)
+transport        | flutter/lib/desktop/pages/desktop_setting_page.dart | future: bind.mainGetVless(),
+transport        | flutter/lib/mobile/pages/settings_page.dart  | var _vlessOn = false;
+transport        | flutter/assets/xray-LICENSE.txt              | Mozilla Public License
+no-downgrade     | src/ui_interface.rs                          | Custom build: never prompt "installed version is lower".
+rdp-render       | src/ui_interface.rs                          | SwiftShader compatibility for the window itself
+rdp-render       | flutter/windows/runner/main.cpp              | ::SetEnvironmentVariableA("ANGLE_DEFAULT_PLATFORM", "swiftshader");
+
+android-xray     | flutter/android/app/build.gradle             | useLegacyPackaging true
+android-xray     | flutter/android/app/src/main/AndroidManifest.xml | android:extractNativeLibs="true"
+android-xray     | flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainApplication.kt | RUSTDESK_ANDROID_NATIVE_LIB_DIR
+
+clipboard-fast   | libs/base/protos/message.proto               | bool clipboard_fast = 3;
+clipboard-fast   | libs/clipboard/src/lib.rs                    | fn set_fast_channel(&mut self, _conn_id: i32, _enabled: bool)
+clipboard-fast   | libs/clipboard/src/platform/windows.rs       | pub fn set_fast_cliprdr_channel(
+clipboard-fast   | libs/clipboard/src/windows/wf_cliprdr.c      | CLIPRDR_FAST_STREAM_PREFETCH_BYTES
+clipboard-fast   | src/client.rs                                | pub clipboard_fast: bool,
+clipboard-fast   | src/client/io_loop.rs                        | fn activate_clipboard_fast_channel(&self) -> bool
+clipboard-fast   | src/ui_session_interface.rs                  | pub fn start_clipboard_fast_channel(&self, parent_conn_id: i32) -> bool
+clipboard-fast   | src/ui_cm_interface.rs                       | Data::ClipboardFastChannel(enabled)
+clipboard-fast   | src/server/connection.rs                     | fn is_clipboard_fast_payload(
+password-diag    | src/server/connection.rs                     | fn write_permanent_password_diagnostic(&self, outcome: &str)
+
+no-displays      | src/server/display_service.rs                | fn hold_transient_empty(
+no-displays      | flutter/lib/models/model.dart                | static const kNoDisplaysGrace = Duration(seconds: 5);
+session-switch   | src/platform/windows.rs                      | let mut pending_session_switch = false;
+
+installer-dblclick | libs/portable/src/main.rs                  | Fork: this package is the installer, so a plain double-click must
+c-debuginfo      | libs/clipboard/build.rs                      | RUSTDESK_C_DEBUGINFO
+c-debuginfo      | libs/virtual_display/dylib/build.rs          | RUSTDESK_C_DEBUGINFO
+self-online      | flutter/lib/desktop/pages/connection_page.dart | static const _selfOnlineListener = 'conn_status_self_online';
+
+i18n             | src/lang/cn.rs                               | ("Import/export all config", "导入/导出全部配置"),
+
+hbb-transport    | libs/hbb_common/src/vless.rs                 | VLESS
+hbb-transport    | libs/hbb_common/src/vless_reality.rs         | REALITY
+hbb-transport    | libs/hbb_common/src/ssh.rs                   | ssh
+hbb-transport    | libs/hbb_common/src/lib.rs                   | pub mod vless;
+hbb-config       | libs/hbb_common/src/config.rs                | pub struct VlessServer {
+hbb-config       | libs/hbb_common/src/config.rs                | pub struct SshServer {
+
+# Upstream code the fork depends on (lost once in 1.5.1.1).
+upstream:clipboard-design | libs/clipboard/src/windows/wf_cliprdr.c | UINT32 m_clipDataId;
+upstream:clipboard-design | libs/clipboard/src/windows/wf_cliprdr.c | Largest range served in one request
