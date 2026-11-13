@@ -75,7 +75,9 @@ fork 的所有改动维护为**一串基于官方 tag 的线性补丁**，放在
    不匹配就拒绝构建；`build_windows.ps1` / `build_installer.ps1` / `build_apk.ps1` 都支持 `-VerifyOnly`，
    只做预检（tag、版本号、工具链、原生库）不出产物。
 5. **归档与校验**：产物进 `D:\RD\releases\<版本>\<平台>/`，文件名 `rustdesk-<版本>-<架构>.<扩展名>`；生成 `manifest.json`、`SHA256SUMS.txt`，并重复校验：**载荷文件清单必须与 `scripts/build/payload-manifest.txt` 完全一致**（`check_payload_manifest.py`，多一个少一个都失败；清单只有在确认新载荷无误后才能用 `--write` 刷新）、私密参数扫描、APK 签名与原生库哈希、Docker 容器健康检查。
-6. **发布与记录**：上传前对每个附件跑 `python scripts/build/check_release_assets.py <文件...>`，不通过不得上传 → GitHub Release（附 `SHA256SUMS.txt` 与 release notes）→ 更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md` → 运行 `scripts/build/mirror_release_index.ps1` 把 `versions-index.json` 与 `INDEX.md` 镜像进 `docs/releases/` 并提交。
+6. **发布与记录**：先写好 `docs/releases/<版本>.md` 并推送 tag，再运行
+   `powershell -File scripts\build\publish_release.ps1 -Version <版本>`（可先加 `-DryRun`）。它按 manifest 只发布客户端产物（Windows/Android，服务端与 Docker 永不上传）、校验 sha256、为实际上传的文件重新生成 `SHA256SUMS.txt`、跑 `check_release_assets.py`（私钥扫描，任何一项失败都不上传）、确认 tag 已在 origin，然后创建 Release 或补传缺失附件，最后回读 GitHub 上每个附件的 digest。**不要直接用 `gh release create/upload`。**
+   发布后更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md` → 运行 `scripts/build/mirror_release_index.ps1` 把 `versions-index.json` 与 `INDEX.md` 镜像进 `docs/releases/` 并提交。
 
 ## 4.1 克隆与行尾约定
 
