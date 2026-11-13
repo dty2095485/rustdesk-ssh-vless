@@ -49,11 +49,7 @@ impl PrivacyMode for PrivacyModeImpl {
         Ok(true)
     }
 
-    fn turn_off_privacy(
-        &mut self,
-        conn_id: i32,
-        _state: Option<PrivacyModeState>,
-    ) -> ResultType<()> {
+    fn turn_off_privacy(&mut self, conn_id: i32, _state: Option<PrivacyModeState>) -> ResultType<()> {
         // Note: The `_state` parameter is intentionally ignored on macOS.
         // On Windows, it's used to notify the connection manager about privacy mode state changes
         // (see win_topmost_window.rs). macOS currently has a simpler single-mode implementation
@@ -81,5 +77,15 @@ impl Drop for PrivacyModeImpl {
         // Use the same cleanup logic as other code paths to keep conn_id consistent
         // and ensure all cleanup is centralized in one place.
         self.clear();
+    }
+}
+
+/// Most closes lock before the connection loop turns privacy mode off, and a lock shortcut
+/// injected while the tap and the blackout are torn down can be lost (#15875).
+pub fn turn_off_before_lock(conn_id: i32) {
+    if super::get_privacy_mode_conn_id() == Some(conn_id) {
+        if let Some(Err(e)) = super::turn_off_privacy(conn_id, None) {
+            hbb_common::log::error!("Failed to turn off privacy mode before locking: {}", e);
+        }
     }
 }

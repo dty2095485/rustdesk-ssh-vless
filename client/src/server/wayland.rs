@@ -11,7 +11,7 @@ use std::io;
 
 use crate::{
     client::{
-        SCRAP_OTHER_VERSION_OR_X11_REQUIRED, SCRAP_UBUNTU_HIGHER_REQUIRED, SCRAP_X11_REQUIRED,
+        SCRAP_OTHER_VERSION_OR_X11_REQUIRED, SCRAP_UBUNTU_HIGHER_REQUIRED,
         SCRAP_XDP_PORTAL_UNAVAILABLE,
     },
     platform::linux::is_x11,
@@ -82,7 +82,9 @@ fn map_err_scrap(err: String) -> io::Error {
         } else if err_lower.contains("pipewire") {
             io::Error::new(io::ErrorKind::Other, SCRAP_OTHER_VERSION_OR_X11_REQUIRED)
         } else {
-            io::Error::new(io::ErrorKind::Other, SCRAP_X11_REQUIRED)
+            // Unclassified, so say what failed: "x11 expected" sent users off to switch to X11
+            // for faults X11 does not fix (#16829).
+            io::Error::new(io::ErrorKind::Other, err)
         }
     }
 }
@@ -320,10 +322,7 @@ pub(super) async fn update_uinput_resolution() {
         scrap::wayland::display::clear_wayland_displays_cache();
         match scrap::wayland::display::get_desktop_rect_for_uinput() {
             // The lookup above just cached the displays, so the rects come from that snapshot.
-            Some(rect) => Some((
-                rect,
-                scrap::wayland::display::get_display_rects_for_uinput(),
-            )),
+            Some(rect) => Some((rect, scrap::wayland::display::get_display_rects_for_uinput())),
             // Raw DRM union: there is no compositor layout to baseline. Empty keeps the #15601
             // remap inactive, which is right when the origins are unknown anyway.
             None => drm_desktop_rect_for_uinput().map(|rect| (rect, Vec::new())),
