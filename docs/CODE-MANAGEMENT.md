@@ -75,7 +75,7 @@ fork 的所有改动维护为**一串基于官方 tag 的线性补丁**，放在
    不匹配就拒绝构建；`build_windows.ps1` / `build_installer.ps1` / `build_apk.ps1` 都支持 `-VerifyOnly`，
    只做预检（tag、版本号、工具链、原生库）不出产物。
 5. **归档与校验**：产物进 `D:\RD\releases\<版本>\<平台>/`，文件名 `rustdesk-<版本>-<架构>.<扩展名>`；生成 `manifest.json`、`SHA256SUMS.txt`，并重复校验：**载荷文件清单必须与 `scripts/build/payload-manifest.txt` 完全一致**（`check_payload_manifest.py`，多一个少一个都失败；清单只有在确认新载荷无误后才能用 `--write` 刷新）、私密参数扫描、APK 签名与原生库哈希、Docker 容器健康检查。
-6. **发布与记录**：GitHub Release（附 `SHA256SUMS.txt` 与 release notes）→ 更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md` → 运行 `scripts/build/mirror_release_index.ps1` 把 `versions-index.json` 与 `INDEX.md` 镜像进 `docs/releases/` 并提交。
+6. **发布与记录**：上传前对每个附件跑 `python scripts/build/check_release_assets.py <文件...>`，不通过不得上传 → GitHub Release（附 `SHA256SUMS.txt` 与 release notes）→ 更新本仓库 `CHANGELOG.md`、`docs/releases/<版本>.md` → 运行 `scripts/build/mirror_release_index.ps1` 把 `versions-index.json` 与 `INDEX.md` 镜像进 `docs/releases/` 并提交。
 
 ## 4.1 克隆与行尾约定
 
@@ -110,3 +110,4 @@ fork 的所有改动维护为**一串基于官方 tag 的线性补丁**，放在
 3. 把发布说明、版本索引只留在 `D:\RD\releases` 而不入库。
 4. 在 `master` 上改写已推送历史，或复用已发布的版本号/tag。
 5. 把地址、UUID、私钥、面板密码写进源码或安装包。
+6. 把服务端 / Docker 镜像（`rustdesk-server-*`、`*.tar`、`*.tar.gz`）上传到 GitHub：hbssh 在编译时嵌入了 SSH 主机私钥（`build-hbssh-keys.sh`），1.5.1.5 曾因此公开了私钥。镜像只在本地 `releases\<版本>\docker\` 归档，经私有渠道部署。
