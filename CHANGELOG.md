@@ -11,7 +11,9 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [Unreleased]
 
-Rebased onto upstream RustDesk **1.5.3** (`95cca3f`, hbb_common `fae47e0`
+## [1.5.3.1] - 2026-11-13
+
+Windows installer rebased onto upstream RustDesk **1.5.3** (`95cca3f`, hbb_common `fae47e0`
 unchanged) through the new patch series (`scripts/upstream/`).
 
 ### Added
@@ -38,6 +40,8 @@ unchanged) through the new patch series (`scripts/upstream/`).
 
 - Upstream moved its `1.5.1` tag after release (`e1ca097` → `23e5bb4`); 1.5.1.x
   was built on `e1ca097`. 1.5.3 contains both.
+- Windows x64 installer only; not tested on a real device before release (see
+  `docs/releases/1.5.3.1.md`). Android and Docker unchanged.
 
 ## [1.5.1.5] - 2026-11-09
 

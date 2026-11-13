@@ -23,6 +23,7 @@
 | 1.5.1.4 | Windows x64 | `windows\rustdesk-1.5.1.4-x86_64.exe` | `9592d97acb42d171…` |
 | 1.5.1.5 | Docker amd64 | `docker\rustdesk-server-combined-1.5.1.5-x86_64.tar.gz` | `6293746520eec3c8…` |
 | 1.5.1.5 | Windows x64 | `windows\rustdesk-1.5.1.5-x86_64.exe` | `421482a7931bc266…` |
+| 1.5.3.1 | Windows x64 | `windows\rustdesk-1.5.3.1-x86_64.exe` | `b92bc0b1f0fe8990…` |
 
 保留策略：最多 10 个版本，当前 10 个。
 
