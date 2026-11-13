@@ -25,7 +25,29 @@
 | `feature/<主题>` | 单点改动 | 从 `master` 开，合并后删除 |
 | `archive/<旧名>` | 历史快照 | 只读，不再合并 |
 
-- 合并上游：`git merge --no-ff <上游tag>`，保留上游历史，不用 squash。
+- 合并上游：用补丁序列 rebase，见 §2.1。本仓库的 `client/` 没有上游历史，不能直接 `git merge` 官方 tag。
+
+## 2.1 补丁序列（上游同步）
+
+fork 的所有改动维护为**一串基于官方 tag 的线性补丁**，放在上游镜像 `work\rustdesk-ssh\rustdesk`：
+
+| 位置 | 分支 | 内容 |
+|---|---|---|
+| 镜像仓库 | `patches/<上游tag>` | 官方 tag + 客户端补丁（每个功能一个 commit，不改 `libs/hbb_common` 指针） |
+| 镜像 `libs/hbb_common` | `patches/<上游tag>` | hbb_common 上游提交 + VLESS/SSH 补丁 |
+
+`scripts/upstream/`：
+
+- `series.conf`：当前序列的上游 tag、**基线 commit id**（不用 tag 名；官方曾在发布后移动 `1.5.1` tag）。
+- `sync-upstream.sh <新tag>`：拉 tag → rebase 两条序列 → 存活检查 → 在本仓库新建 `upstream/<新tag>` 分支、替换 `client/`（hbb_common 内嵌）并本地提交。遇冲突停下，解决后 `git rebase --continue`，再跑同一条命令继续。
+- `patch-markers.txt` + `check_patches.py`：每个补丁至少一条标志性字符串，缺一条即失败；`upstream:` 开头的条目守护 fork 依赖的上游代码（1.5.1.1 丢过）。**新增补丁时同步加标记。**
+
+规则：
+
+1. 镜像仓库开启 `rerere`（脚本自动设置），同一冲突只解决一次；`src/lang/*.rs` 在 `.git/info/attributes` 设为 `merge=union`（两边都在文件末尾追加翻译）。
+2. 新功能/修复可以照常提交到本仓库 `client/`，但下次同步前必须移植进序列：脚本会对比 `series.conf` 最后一次提交之后 `master` 上改过 `client/` 的 commit，有就停下并给出 `format-patch --relative=client | git am -3` 命令。
+3. 不提交纯格式化（rustfmt）或权限位改动，它们只会制造冲突。
+4. `build: lock files` 冲突时优先重新生成（`cargo update -p <crate>`、`flutter pub get`），不要手工合并。
 - 禁止在 `master` 上直接做“一次性大合并”提交后又改写历史。
 
 ## 3. 版本号与 tag
@@ -37,7 +59,7 @@
 
 ## 4. 发布流程（六步，缺一不可）
 
-1. **合上游**：`master` 合入目标官方 tag，解决冲突时禁止整文件 `checkout --ours`；冲突文件必须与“上一次发布的 fork 源码”三方比对后再定。
+1. **合上游**：`bash scripts/upstream/sync-upstream.sh <官方tag>`（§2.1），存活检查通过后把 `upstream/<tag>` 合入 `master`；解决冲突时禁止整文件 `checkout --ours`，两边的行都要保留。
 2. **定版本**：在 `Cargo.toml` / `pubspec.yaml` / `build.gradle` 写入版本（数值版本用于 Windows EXE 与 APK `versionCode`）。
 3. **打 tag**：`git tag -a v<版本> -m "..."`，推送到 GitHub。
 4. **从 tag 构建**：
