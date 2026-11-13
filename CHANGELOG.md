@@ -11,6 +11,34 @@ fork releases are tagged `v<version>` in this repository.
 
 ## [Unreleased]
 
+Rebased onto upstream RustDesk **1.5.3** (`95cca3f`, hbb_common `fae47e0`
+unchanged) through the new patch series (`scripts/upstream/`).
+
+### Added
+
+- Upstream 1.5.1 → 1.5.3: request approval, trusted devices for direct-IP
+  connections, greetd Wayland login screen over DRM.
+
+### Fixed
+
+- Upstream 1.5.1 → 1.5.3: Windows main-IPC authorization, installer directory
+  guards and the named-pipe installer handoff that F-Secure blocked, service
+  IPC retry before terminating the GUI, clipboard owner marker order, still
+  screens no longer re-encoded on DRM, port-forward KCP handle lifetime, relay
+  only to offered addresses, sensitive options blocked in strategy updates.
+
+### Changed
+
+- The client source is now the upstream tag plus a linear patch series (one
+  commit per fork feature) instead of a hand-merged tree. Formatting-only and
+  file-mode differences the old tree carried in ~50 upstream files were dropped,
+  so these files are byte-identical to upstream again.
+
+### Notes
+
+- Upstream moved its `1.5.1` tag after release (`e1ca097` → `23e5bb4`); 1.5.1.x
+  was built on `e1ca097`. 1.5.3 contains both.
+
 ## [1.5.1.5] - 2026-11-09
 
 Windows installer plus the combined server image archive.

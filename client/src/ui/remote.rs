@@ -146,10 +146,7 @@ impl InvokeUiSession for SciterHandler {
 
     fn set_display(&self, x: i32, y: i32, w: i32, h: i32, cursor_embedded: bool, scale: f64) {
         let scale = if scale <= 0.0 { 1.0 } else { scale };
-        self.call(
-            "setDisplay",
-            &make_args!(x, y, w, h, cursor_embedded, scale),
-        );
+        self.call("setDisplay", &make_args!(x, y, w, h, cursor_embedded, scale));
         // https://sciter.com/forums/topic/color_spaceiyuv-crash
         // Nothing spectacular in decoder – done on CPU side.
         // So if you can do BGRA translation on your side – the better.
@@ -624,7 +621,7 @@ impl SciterSession {
             .lc
             .write()
             .unwrap()
-            .initialize(id, conn_type, None, force_relay, None, None, None);
+            .initialize(id, conn_type, None, force_relay, None, None, None, "");
 
         Self(session)
     }

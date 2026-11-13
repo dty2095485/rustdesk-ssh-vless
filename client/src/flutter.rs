@@ -701,8 +701,7 @@ impl InvokeUiSession for FlutterHandler {
     }
 
     /// unused in flutter, use switch_display or set_peer_info
-    fn set_display(&self, _x: i32, _y: i32, _w: i32, _h: i32, _cursor_embedded: bool, _scale: f64) {
-    }
+    fn set_display(&self, _x: i32, _y: i32, _w: i32, _h: i32, _cursor_embedded: bool, _scale: f64) {}
 
     fn update_privacy_mode(&self) {
         self.push_event::<&str>("update_privacy_mode", &[], &[]);
@@ -1317,6 +1316,7 @@ pub fn session_add(
     password: String,
     is_shared_password: bool,
     conn_token: Option<String>,
+    login_method: &str,
 ) -> ResultType<FlutterSession> {
     let conn_type = if is_file_transfer {
         ConnType::FILE_TRANSFER
@@ -1377,6 +1377,7 @@ pub fn session_add(
         get_adapter_luid(),
         shared_password,
         conn_token,
+        login_method,
     );
 
     let session = Arc::new(session.clone());
